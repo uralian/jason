@@ -1,2 +1,42 @@
+.metadata
+secret.key
 *.class
 *.log
+local.* 
+
+# sbt
+dist/*
+target/
+lib_managed/
+src_managed/
+project/boot/
+project/plugins/project/
+.history
+boot/
+.env
+.jvmopts
+.bsp
+
+# Scala-IDE/Eclipse
+.scala_dependencies
+.cache
+.cache-main
+.cache-tests
+.classpath
+.project
+.settings
+.target/
+.worksheet/
+*.sc
+bin/
+
+# IntelliJ
+.idea/
+out/
+*.iml
+*.ipr
+*.iws
+
+# Mac
+.DS_Store
+
