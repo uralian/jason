@@ -4,6 +4,7 @@ import org.json4s._
 import org.json4s.native.JsonMethods
 
 import java.util.regex.Pattern
+import scala.reflect.ClassTag
 
 /**
  * Various routines for JSON manipulation.
@@ -98,9 +99,28 @@ trait JsonUtils {
   private def adjust(jv: JValue)(implicit formats: Formats): JValue =
     formats.emptyValueStrategy.noneValReplacement.map(_ => jv).getOrElse(jv.noNulls)
 
+  /* custom serializer helpers */
+
+  /**
+   * Creates a custom serializer that is used ONLY for deserializing JSON.
+   * At attempt to serialize a value into JSON will result in [[NotImplementedError]].
+   *
+   * @param des function that take Formats and returns a deserialization function.
+   * @tparam A the target value type.
+   * @return custom JSON deserializer for type A.
+   */
+  def deserializer[A: ClassTag](des: Formats => PartialFunction[JValue, A]): CustomSerializer[A] = {
+    val f = (fmt: Formats) => (des(fmt), new PartialFunction[Any, JValue] {
+      def isDefinedAt(x: Any): Boolean = false
+      // $COVERAGE-OFF$
+      def apply(v1: Any): JValue = ???
+      // $COVERAGE-ON$
+    })
+    new CustomSerializer[A](f)
+  }
+
   /* common serializers */
 
-  @SuppressWarnings(Array("org.wartremover.warts.Any"))
   val patternSerializer = new CustomSerializer[Pattern](_ => ( {
     case JString(str) => Pattern.compile(str)
   }, {
@@ -112,6 +132,11 @@ trait JsonUtils {
  * Singleton object for JSON helpers.
  */
 object JsonUtils extends JsonUtils {
+
+  /**
+   * JSON formats.
+   */
+  val formats = DefaultFormats.withStrictOptionParsing.withStrictArrayExtraction.withBigDecimal
 
   /**
    * Serializers for common types.

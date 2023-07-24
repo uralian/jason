@@ -70,7 +70,7 @@ class JsonUtilsSpec extends AbstractUnitSpec with JsonUtils {
         None, Some(List(Person("Jane", false, None, Some(20), None, null, None)
         )))
       decomposeJson(person) mustBe ("name" -> "John") ~ ("married" -> true) ~
-        ("employment" -> "employed") ~ ("scores" -> List(1.0, 2.0)) ~ ("children" -> List(
+        ("employment" -> "employed") ~ ("scores" -> List(JDecimal(1.0), JDecimal(2.0))) ~ ("children" -> List(
         ("name" -> "Jane") ~ ("married" -> false) ~ ("age" -> 20)
       ))
     }
@@ -97,11 +97,44 @@ class JsonUtilsSpec extends AbstractUnitSpec with JsonUtils {
   }
 
   "writeJson" should {
-    "converts class to JSON and then to a string" in {
+    "converts class to JSON and then to a compact string" in {
       val person = Person("John", true, None, null, Some(List(1, 2)), None, Some(List(
         Person("Jane", false, None, Some(20), None, null, None)
       )))
       writeJson(person) mustBe """{"name":"John","married":true,"scores":[1.0,2.0],"children":[{"name":"Jane","married":false,"age":20}]}"""
+    }
+    "converts class to JSON and then to a pretty string" in {
+      val person = Person("John", true, None, null, Some(List(1, 2)), None, Some(List(
+        Person("Jane", false, None, Some(20), None, null, None)
+      )))
+      writeJson(person, false) mustBe
+        """{
+          |  "name":"John",
+          |  "married":true,
+          |  "scores":[1.0,2.0],
+          |  "children":[{
+          |    "name":"Jane",
+          |    "married":false,
+          |    "age":20
+          |  }]
+          |}""".stripMargin
+    }
+  }
+
+  "deserializer" should {
+    "create a custom serializer" in {
+      val des = deserializer[String](_ => {
+        case JInt(n) => n.toString
+      })
+      implicit val jsonFormats: Formats = testFormats + des
+      extractJson[String](JInt(123)) mustBe "123"
+    }
+    "be ignored when trying to serialize values" in {
+      val des = deserializer[String](_ => {
+        case JInt(n) => n.toString
+      })
+      implicit val jsonFormats: Formats = testFormats + des
+      decomposeJson("123") mustBe JString("123")
     }
   }
 
@@ -148,7 +181,7 @@ object JsonUtilsSpec {
                                   tags: Option[Map[String, Any]],
                                   children: Option[List[Person]])
 
-  private val testFormats = DefaultFormats ++
+  private val testFormats = JsonUtils.formats ++
     JsonUtils.commonSerializers +
     Json4s.serializer(Employment)
 }

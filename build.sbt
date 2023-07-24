@@ -9,8 +9,7 @@ ThisBuild / crossScalaVersions := Seq("2.12.14", "2.13.6")
 // build options
 ThisBuild / wartremoverErrors ++= Warts.unsafe.filterNot { w =>
   import Wart._
-  Set(NonUnitStatements, TripleQuestionMark, DefaultArguments) contains w
-  //  Set(NonUnitStatements, DefaultArguments, StringPlusAny) contains w
+  Set(NonUnitStatements, TripleQuestionMark, DefaultArguments, Any) contains w
 }
 
 // scoverage options

@@ -1,6 +1,5 @@
 package com.uralian.jason
 
-import com.uralian.jason.model.SchemaDraft
 import org.mockito.ArgumentMatchers.anyInt
 import org.mockito.Mockito.{times, verify, when}
 import org.mockito.{ArgumentMatchers, Mockito}
@@ -13,14 +12,14 @@ abstract class SampleUnitSpec extends AbstractUnitSpec {
 
   "simple tests" should {
     "work for matchers" in {
-      val v3 = SchemaDraft.V3
-      v3.entryName must not be empty
-      v3.url.size must be > 10
-      v3.description startsWith "Original" mustBe true
+      val x = (22 + 33).toString
+      x must not be empty
+      x.size mustBe 2
+      x startsWith "5" mustBe true
     }
     "work for exceptions" in {
-      val v3 = SchemaDraft.V3
-      noException should be thrownBy v3.entryName == "v3"
+      noException must be thrownBy "123".toInt
+      a[NumberFormatException] mustBe thrownBy("abcd()".toInt)
     }
   }
 
