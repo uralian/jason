@@ -1,11 +1,11 @@
-addSbtPlugin("io.github.davidgregory084" % "sbt-tpolecat" % "0.1.20")
+addSbtPlugin("io.github.davidgregory084" % "sbt-tpolecat" % "0.2.0")
 
-addSbtPlugin("org.wartremover" % "sbt-wartremover" % "2.4.16")
+addSbtPlugin("org.wartremover" % "sbt-wartremover" % "3.1.3")
 
-addSbtPlugin("org.scoverage" % "sbt-scoverage" % "1.6.1")
+addSbtPlugin("org.scoverage" % "sbt-scoverage" % "2.0.8")
 
-addSbtPlugin("au.com.onegeek" %% "sbt-dotenv" % "2.1.204")
+addSbtPlugin("nl.gn0s1s" %% "sbt-dotenv" % "3.0.0")
 
-addSbtPlugin("org.xerial.sbt" %% "sbt-sonatype" % "3.9.9")
+addSbtPlugin("org.xerial.sbt" %% "sbt-sonatype" % "3.9.21")
 
 addSbtPlugin("com.github.sbt" %% "sbt-pgp" % "2.1.2")
