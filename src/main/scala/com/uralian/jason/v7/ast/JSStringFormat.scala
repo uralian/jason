@@ -18,7 +18,7 @@ object JSStringFormat extends Enum[JSStringFormat] {
 
   case object Date extends JSStringFormat("date")
 
-  case object Time extends JSStringFormat("date")
+  case object Time extends JSStringFormat("time")
 
   case object Email extends JSStringFormat("email")
 

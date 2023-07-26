@@ -2,8 +2,7 @@ package com.uralian.jason.v7.ast
 
 import com.uralian.jason.util.JsonUtils
 import org.json4s.FieldSerializer.renameFrom
-import org.json4s.JsonAST.JArray
-import org.json4s.{FieldSerializer, JObject, JValue}
+import org.json4s.{FieldSerializer, JArray, JBool, JNothing, JObject, JString, JValue}
 
 import java.util.regex.Pattern
 
@@ -67,6 +66,86 @@ sealed trait JSDataType {
    * @return optional type annotation.
    */
   def annotation: Option[Annotation]
+}
+
+/**
+ * Factory for [[JSDataType]] instances.
+ */
+object JSDataType extends JsonUtils {
+
+  private val allOrNothing: PartialFunction[JValue, JSDataType] = {
+    case JBool(true)  => JSAnything
+    case JBool(false) => JSNothing
+  }
+
+  private val explicitTypeResolver = {
+    def getType(obj: JObject) = obj \ "type" match {
+      case JString(s) => Some(s)
+      case _          => None
+    }
+
+    val extractType: PartialFunction[JValue, (JObject, Option[String])] = {
+      case obj: JObject if getType(obj).isDefined => (obj, getType(obj))
+    }
+
+    val convert: PartialFunction[(JObject, Option[String]), JSDataType] = {
+      case (obj: JObject, Some("string"))  => extractJson[JSString](obj)
+      case (obj: JObject, Some("integer")) => extractJson[JSInteger](obj)
+      case (obj: JObject, Some("number"))  => extractJson[JSNumber](obj)
+      case (obj: JObject, Some("boolean")) => extractJson[JSBoolean](obj)
+      case (obj: JObject, Some("null"))    => extractJson[JSNull](obj)
+      case (obj: JObject, Some("array"))   => extractJson[JSArray](obj)
+    }
+
+    extractType andThen convert
+  }
+
+  private val implicitTypeResolver = {
+
+    def resolveByFields(fields: Iterable[String],
+                        func: JValue => JSDataType): PartialFunction[JValue, JSDataType] = {
+      case jv if fields.map(jv \ _).exists(_ != JNothing) => func(jv)
+    }
+
+    val resolveString = resolveByFields(
+      List("minLength", "maxLength", "pattern", "format"),
+      extractJson[JSString]
+    )
+
+    val resolveNumber = resolveByFields(
+      List("minimum", "maximum", "exclusiveMinimum", "exclusiveMaximum", "multipleOf"),
+      extractJson[JSNumber]
+    )
+
+    val resolveArray = resolveByFields(
+      List("contains", "minItems", "maxItems", "unique"),
+      extractJson[JSArray]
+    )
+
+    resolveString orElse resolveNumber orElse resolveArray
+  }
+
+  private val des: PartialFunction[JValue, JSDataType] =
+    allOrNothing orElse explicitTypeResolver orElse implicitTypeResolver orElse {
+      case _ => JSAnything
+    }
+
+  /**
+   * JSON serializer for [[JSDataType]] instances.
+   */
+  val serializer = deserializer[JSDataType](_ => des)
+}
+
+@SuppressWarnings(Array("org.wartremover.warts.Null"))
+case object JSAnything extends JSDataType {
+  val typeName: JSTypeName = null
+  val annotation: Option[Annotation] = None
+}
+
+@SuppressWarnings(Array("org.wartremover.warts.Null"))
+case object JSNothing extends JSDataType {
+  val typeName: JSTypeName = null
+  val annotation: Option[Annotation] = None
 }
 
 /**
@@ -239,5 +318,112 @@ object JSNull extends JsonUtils {
   val serializer = deserializer[JSNull](_ => {
     case jv: JObject =>
       JSNull(Annotation.noneIfEmpty(extractJson[Option[Annotation]](jv)))
+  })
+}
+
+/**
+ * Array schema: can be either a typed list or a tuple.
+ */
+sealed trait ArraySchema
+
+/**
+ * A typed list.
+ *
+ * @param itemType type of each list item.
+ */
+final case class ListType(itemType: JSDataType) extends ArraySchema
+
+/**
+ * Factory for [[ListType]] instances.
+ */
+object ListType {
+  /**
+   * JSON serializer for [[ListType]] instances.
+   */
+  val serializer = FieldSerializer[ListType](
+    deserializer = renameFrom("items", "itemType")
+  )
+}
+
+/**
+ * Type of items in the tuple.
+ *
+ * @param itemTypes  types of items in the tuple.
+ * @param allowExtra the type of the allowed extra items. JSON Schema supports either a boolean
+ *                   to indicate whether they are allowed or a specific type of allowed items.
+ *                   We capture this as as generalized [[JSDataType]], where:
+ *                   - [[JSAnything]] means any items are allowed (`true` in JSON schema)
+ *                   - [[JSNothing]] means no items are allowed (`false` in JSON schema)
+ *                   - any other type defines which items are specifically allowed.
+ */
+final case class TupleType(itemTypes: List[JSDataType],
+                           allowExtra: Option[JSDataType]) extends ArraySchema
+
+/**
+ * Factory for [[TupleType]] instances.
+ */
+object TupleType extends JsonUtils {
+  /**
+   * JSON serializer for [[TupleType]] instances.
+   */
+  val serializer = deserializer[TupleType](_ => {
+    case jv: JObject =>
+      val itemTypes = extractJson[List[JSDataType]](jv \ "items")
+      val allowExtra = jv \ "additionalItems" match {
+        case JBool(true)  => Some(JSAnything)
+        case JBool(false) => Some(JSNothing)
+        case obj: JObject => Some(extractJson[JSDataType](obj))
+        case _            => None
+      }
+      TupleType(itemTypes = itemTypes, allowExtra = allowExtra)
+  })
+}
+
+/**
+ * JSON schema Array data type.
+ *
+ * @param annotation type annotation.
+ * @param schema     array schema.
+ * @param contains   a type that the array must contain among its items.
+ * @param minItems   minimal array length.
+ * @param maxItems   maximum array length.
+ * @param unique     whether all items must be unique.
+ */
+final case class JSArray private(annotation: Option[Annotation] = None,
+                                 schema: Option[ArraySchema] = None,
+                                 contains: Option[JSDataType] = None,
+                                 minItems: Option[Int] = None,
+                                 maxItems: Option[Int] = None,
+                                 unique: Option[Boolean] = None) extends JSDataType {
+  assert(minItems.forall(_ >= 0))
+  assert(maxItems.forall(_ >= 0))
+
+  val typeName: JSTypeName = JSTypeName.JSArray
+}
+
+/**
+ * Factory for [[JSArray]] instances.
+ */
+object JSArray extends JsonUtils {
+
+  private def extractSchema(jv: JObject): Option[ArraySchema] = jv \ "items" match {
+    case _: JObject => JsonUtils.extractJson[Option[ListType]](jv)
+    case _: JArray  => JsonUtils.extractJson[Option[TupleType]](jv)
+    case _          => None
+  }
+
+  /**
+   * JSON serializer for [[JSArray]] instances.
+   */
+  val serializer = deserializer[JSArray](_ => {
+    case jv: JObject =>
+      JSArray(
+        annotation = Annotation.noneIfEmpty(extractJson[Option[Annotation]](jv)),
+        schema = extractSchema(jv),
+        contains = extractJson[Option[JSDataType]](jv \ "contains"),
+        minItems = extractJson[Option[Int]](jv \ "minItems"),
+        maxItems = extractJson[Option[Int]](jv \ "maxItems"),
+        unique = extractJson[Option[Boolean]](jv \ "unique")
+      )
   })
 }

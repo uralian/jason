@@ -39,11 +39,11 @@ class JSPrimitiveTypeSpec extends AbstractUnitSpec {
       val json = """{}"""
       val data = JsonUtils.readJson[JSString](json)
       data.typeName mustBe JSTypeName.JSString
-      data.annotation mustBe None
-      data.minLength mustBe None
-      data.maxLength mustBe None
-      data.pattern mustBe None
-      data.format mustBe None
+      data.annotation mustBe empty
+      data.minLength mustBe empty
+      data.maxLength mustBe empty
+      data.pattern mustBe empty
+      data.format mustBe empty
     }
     "fail for invalid JSON" in {
       val json = """{"minLength": true}"""
@@ -87,12 +87,12 @@ class JSPrimitiveTypeSpec extends AbstractUnitSpec {
       val json = """{}"""
       val data = JsonUtils.readJson[JSInteger](json)
       data.typeName mustBe JSTypeName.JSInteger
-      data.annotation mustBe None
-      data.minimum mustBe None
-      data.maximum mustBe None
-      data.exclusiveMinimum mustBe None
-      data.exclusiveMaximum mustBe None
-      data.multipleOf mustBe None
+      data.annotation mustBe empty
+      data.minimum mustBe empty
+      data.maximum mustBe empty
+      data.exclusiveMinimum mustBe empty
+      data.exclusiveMaximum mustBe empty
+      data.multipleOf mustBe empty
     }
     "fail for invalid JSON" in {
       val json = """{"minimum": "11"}"""
@@ -136,11 +136,11 @@ class JSPrimitiveTypeSpec extends AbstractUnitSpec {
       val json = """{}"""
       val data = JsonUtils.readJson[JSNumber](json)
       data.typeName mustBe JSTypeName.JSNumber
-      data.minimum mustBe None
-      data.maximum mustBe None
-      data.exclusiveMinimum mustBe None
-      data.exclusiveMaximum mustBe None
-      data.multipleOf mustBe None
+      data.minimum mustBe empty
+      data.maximum mustBe empty
+      data.exclusiveMinimum mustBe empty
+      data.exclusiveMaximum mustBe empty
+      data.multipleOf mustBe empty
     }
     "fail for invalid JSON" in {
       val json = """{"maximum": "11"}"""
@@ -168,7 +168,7 @@ class JSPrimitiveTypeSpec extends AbstractUnitSpec {
       val json = """{}"""
       val data = JsonUtils.readJson[JSBoolean](json)
       data.typeName mustBe JSTypeName.JSBoolean
-      data.annotation mustBe None
+      data.annotation mustBe empty
     }
   }
 
@@ -188,7 +188,7 @@ class JSPrimitiveTypeSpec extends AbstractUnitSpec {
       val json = """{}"""
       val data = JsonUtils.readJson[JSNull](json)
       data.typeName mustBe JSTypeName.JSNull
-      data.annotation mustBe None
+      data.annotation mustBe empty
     }
   }
 }

@@ -17,6 +17,7 @@ abstract class AbstractUnitSpec extends AnyWordSpec
   with BeforeAndAfterAll
   with Matchers
   with OptionValues
+  with EitherValues
   with ScalaFutures
   with Inside
   with MockitoSugar
