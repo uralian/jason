@@ -112,6 +112,7 @@ trait JsonUtils {
   def deserializer[A: ClassTag](des: Formats => PartialFunction[JValue, A]): CustomSerializer[A] = {
     val f = (fmt: Formats) => (des(fmt), new PartialFunction[Any, JValue] {
       def isDefinedAt(x: Any): Boolean = false
+
       // $COVERAGE-OFF$
       def apply(v1: Any): JValue = ???
       // $COVERAGE-ON$
@@ -119,12 +120,26 @@ trait JsonUtils {
     new CustomSerializer[A](f)
   }
 
+  def objectDeserializer[A: ClassTag](objToValue: JObject => A): CustomSerializer[A] = {
+    val pf: PartialFunction[JValue, A] = {
+      case obj: JObject => objToValue(obj)
+    }
+    deserializer(_ => pf)
+  }
+
+
   /* common serializers */
 
   val patternSerializer = new CustomSerializer[Pattern](_ => ( {
     case JString(str) => Pattern.compile(str)
   }, {
     case p: Pattern => JString(p.pattern())
+  }))
+
+  val patternKeySerializer = new CustomKeySerializer[Pattern](_ => ( {
+    case str => Pattern.compile(str)
+  }, {
+    case p: Pattern => p.pattern()
   }))
 }
 

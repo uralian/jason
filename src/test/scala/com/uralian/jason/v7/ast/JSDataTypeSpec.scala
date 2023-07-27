@@ -141,6 +141,27 @@ class JSDataTypeSpec extends AbstractUnitSpec {
           unique.value mustBe true
       }
     }
+    "handle explicit 'object' schema" in {
+      val json =
+        """
+          |{
+          |  "type": "object",
+          |  "properties": {
+          |    "name": {"type": "string", "maxLength": 100},
+          |    "age": {"type": "integer", "minimum": 0}
+          |  },
+          |  "minProperties": 2
+          |}
+          |""".stripMargin
+      inside(JsonUtils.readJson[JSDataType](json)) {
+        case JSObject(_, props, _, _, _, _, minProps, _) =>
+          props.value mustBe Map[String, JSDataType](
+            "name" -> JSString(maxLength = Some(100)),
+            "age" -> JSInteger(minimum = Some(0))
+          )
+          minProps.value mustBe 2
+      }
+    }
     "handle implicit 'string' schema" in {
       val json =
         """
@@ -175,6 +196,26 @@ class JSDataTypeSpec extends AbstractUnitSpec {
         case JSArray(_, schema, contains, _, _, _) =>
           schema.value mustBe ListType(JSInteger())
           contains.value mustBe JSInteger(minimum = Some(0))
+      }
+    }
+    "handle implicit 'object' schema" in {
+      val json =
+        """
+          |{
+          |  "properties": {
+          |    "name": {"type": "string", "maxLength": 100},
+          |    "age": {"type": "integer", "minimum": 0}
+          |  },
+          |  "maxProperties": 5
+          |}
+          |""".stripMargin
+      inside(JsonUtils.readJson[JSDataType](json)) {
+        case JSObject(_, props, _, _, _, _, _, maxProps) =>
+          props.value mustBe Map[String, JSDataType](
+            "name" -> JSString(maxLength = Some(100)),
+            "age" -> JSInteger(minimum = Some(0))
+          )
+          maxProps.value mustBe 5
       }
     }
     "handle default 'accept all' schema" in {

@@ -21,11 +21,13 @@ package object ast {
    * JSON formats.
    */
   implicit val jsonFormats: Formats = JsonUtils.formats ++
-    JsonUtils.commonSerializers ++
+    JsonUtils.commonSerializers +
+    JsonUtils.patternKeySerializer ++
     primitiveTypeSerializers +
     ListType.serializer +
     TupleType.serializer +
     JSArray.serializer +
+    JSObject.serializer +
     Annotation.serializer +
     JSDataType.serializer +
     Json4s.serializer(JSStringFormat)

@@ -95,6 +95,7 @@ object JSDataType extends JsonUtils {
       case (obj: JObject, Some("boolean")) => extractJson[JSBoolean](obj)
       case (obj: JObject, Some("null"))    => extractJson[JSNull](obj)
       case (obj: JObject, Some("array"))   => extractJson[JSArray](obj)
+      case (obj: JObject, Some("object"))  => extractJson[JSObject](obj)
     }
 
     extractType andThen convert
@@ -122,7 +123,13 @@ object JSDataType extends JsonUtils {
       extractJson[JSArray]
     )
 
-    resolveString orElse resolveNumber orElse resolveArray
+    val resolveObject = resolveByFields(
+      List("properties", "patternProperties", "additionalProperties", "required", "propertyNames",
+        "minProperties", "maxProperties"),
+      extractJson[JSObject]
+    )
+
+    resolveString orElse resolveNumber orElse resolveArray orElse resolveObject
   }
 
   private val des: PartialFunction[JValue, JSDataType] =
@@ -426,4 +433,65 @@ object JSArray extends JsonUtils {
         unique = extractJson[Option[Boolean]](jv \ "unique")
       )
   })
+}
+
+/**
+ * JSON Schema Object data type.
+ *
+ * @param annotation           type annotation.
+ * @param properties           property types by name.
+ * @param patternProperties    property types by name pattern.
+ * @param additionalProperties the type of the allowed extra properties. JSON Schema supports
+ *                             either a boolean to indicate whether they are allowed or
+ *                             a specific type of allowed additional properties.
+ *                             We capture this as as generalized [[JSDataType]], where:
+ *                             - [[JSAnything]] means any properties are allowed (`true` in JSON schema)
+ *                             - [[JSNothing]] means no properties are allowed (`false` in JSON schema)
+ *                             - any other type defines which properties are specifically allowed.
+ * @param requiredProperties   the required property names.
+ * @param propertyNames        enforces constraints on the property names.
+ * @param minProperties        the minimum number of properties.
+ * @param maxProperties        the maximum number of properties.
+ */
+final case class JSObject(annotation: Option[Annotation] = None,
+                          properties: Option[Map[String, JSDataType]] = None,
+                          patternProperties: Option[Map[Pattern, JSDataType]] = None,
+                          additionalProperties: Option[JSDataType] = None,
+                          requiredProperties: Option[List[String]] = None,
+                          propertyNames: Option[JSString] = None,
+                          minProperties: Option[Int] = None,
+                          maxProperties: Option[Int] = None) extends JSDataType {
+  assert(minProperties.forall(_ >= 0))
+  assert(maxProperties.forall(_ >= 0))
+
+  val typeName: JSTypeName = JSTypeName.JSObject
+}
+
+/**
+ * Factory for [[JSObject]] instances.
+ */
+object JSObject extends JsonUtils {
+
+  private def extractAdditionalProps(jv: JValue) = jv match {
+    case JBool(true)  => Some(JSAnything)
+    case JBool(false) => Some(JSNothing)
+    case obj: JObject => Some(extractJson[JSDataType](obj))
+    case _            => None
+  }
+
+  /**
+   * JSON serializer for [[JSObject]] instances.
+   */
+  val serializer = objectDeserializer[JSObject](jv =>
+    JSObject(
+      annotation = Annotation.noneIfEmpty(extractJson[Option[Annotation]](jv)),
+      properties = extractJson[Option[Map[String, JSDataType]]](jv \ "properties"),
+      patternProperties = extractJson[Option[Map[Pattern, JSDataType]]](jv \ "patternProperties"),
+      additionalProperties = extractAdditionalProps(jv \ "additionalProperties"),
+      requiredProperties = extractJson[Option[List[String]]](jv \ "required"),
+      propertyNames = extractJson[Option[JSString]](jv \ "propertyNames"),
+      minProperties = extractJson[Option[Int]](jv \ "minProperties"),
+      maxProperties = extractJson[Option[Int]](jv \ "maxProperties")
+    )
+  )
 }

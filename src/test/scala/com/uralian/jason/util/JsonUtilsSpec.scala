@@ -151,6 +151,22 @@ class JsonUtilsSpec extends AbstractUnitSpec with JsonUtils {
       json mustBe JString(regex)
     }
   }
+
+  "PatternKeySerializer" should {
+    val regex = "abc.+"
+    "deserialize JSON into Pattern key" in {
+      val json: JValue = regex -> "hello"
+      val data = extractJson[Map[Pattern, String]](json)
+      data.map {
+        case (k, v) => k.pattern() -> v
+      } mustBe Map(regex -> "hello")
+    }
+    "serialize Pattern into JSON string" in {
+      val data = Map(Pattern.compile(regex) -> 123)
+      val json = decomposeJson(data)
+      json mustBe JObject(regex -> JInt(123))
+    }
+  }
 }
 
 /**
@@ -182,6 +198,6 @@ object JsonUtilsSpec {
                                   children: Option[List[Person]])
 
   private val testFormats = JsonUtils.formats ++
-    JsonUtils.commonSerializers +
+    JsonUtils.commonSerializers + JsonUtils.patternKeySerializer +
     Json4s.serializer(Employment)
 }
