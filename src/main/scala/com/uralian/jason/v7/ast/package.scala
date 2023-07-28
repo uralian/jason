@@ -9,13 +9,14 @@ import org.json4s.{Formats, Serializer}
  */
 package object ast {
 
-  private val primitiveTypeSerializers = List[Serializer[_]](
+  private val scalarTypeSerializers = List[Serializer[_]](
     JSString.serializer,
     JSInteger.serializer,
     JSNumber.serializer,
     JSBoolean.serializer,
     JSNull.serializer,
-    JSConst.serializer
+    JSConst.serializer,
+    JSEnum.serializer
   )
 
   /**
@@ -24,7 +25,7 @@ package object ast {
   implicit val jsonFormats: Formats = JsonUtils.formats ++
     JsonUtils.commonSerializers +
     JsonUtils.patternKeySerializer ++
-    primitiveTypeSerializers +
+    scalarTypeSerializers +
     ListType.serializer +
     TupleType.serializer +
     JSArray.serializer +

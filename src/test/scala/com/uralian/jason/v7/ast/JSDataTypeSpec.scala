@@ -77,6 +77,18 @@ class JSDataTypeSpec extends AbstractUnitSpec {
         case JSConst(Some(_), value) => value mustBe JObject("a" -> 1, "b" -> true)
       }
     }
+    "handle enum schema" in {
+      val json =
+        """
+          |{
+          |  "title": "sample",
+          |  "enum": [1, "abc", true, {"x": "y"}]
+          |}
+          |""".stripMargin
+      inside(JsonUtils.readJson[JSDataType](json)) {
+        case JSEnum(Some(_), values) => values mustBe List[JValue](1, "abc", true, "x" -> "y")
+      }
+    }
     "handle explicit 'string' schema" in {
       val json =
         """

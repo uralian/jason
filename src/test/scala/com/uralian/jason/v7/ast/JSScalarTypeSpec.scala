@@ -3,12 +3,12 @@ package com.uralian.jason.v7.ast
 import com.uralian.jason.AbstractUnitSpec
 import com.uralian.jason.util.JsonUtils
 import org.json4s.JsonDSL._
-import org.json4s.{JArray, JDecimal, JInt, JObject, MappingException}
+import org.json4s.{JArray, JDecimal, JInt, JObject, JValue, MappingException}
 
 /**
- * JSDataType test suite.
+ * JSScalarType test suite.
  */
-class JSPrimitiveTypeSpec extends AbstractUnitSpec {
+class JSScalarTypeSpec extends AbstractUnitSpec {
 
   "JSString" should {
     "deserialize from valid JSON with optional elements" in {
@@ -206,6 +206,27 @@ class JSPrimitiveTypeSpec extends AbstractUnitSpec {
       val data = JsonUtils.readJson[JSConst](json)
       data.annotation mustBe empty
       data.value mustBe JInt(123)
+    }
+  }
+
+  "JSEnum" should {
+    "deserialize from valid JSON with optional elements" in {
+      val json =
+        """
+          |{
+          |  "title": "sample",
+          |  "enum": [1, "abc", true, {"x": "y"}]
+          |}
+          |""".stripMargin
+      val data = JsonUtils.readJson[JSEnum](json)
+      data.annotation.value mustBe Annotation(title = Some("sample"))
+      data.values mustBe List[JValue](1, "abc", true, "x" -> "y")
+    }
+    "deserialize from valid JSON without optional elements" in {
+      val json = """{"enum": [1, "abc", true, {"x": "y"}]}"""
+      val data = JsonUtils.readJson[JSEnum](json)
+      data.annotation mustBe empty
+      data.values mustBe List[JValue](1, "abc", true, "x" -> "y")
     }
   }
 }

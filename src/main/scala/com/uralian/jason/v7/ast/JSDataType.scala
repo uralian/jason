@@ -67,13 +67,11 @@ sealed trait JSDataType {
  */
 object JSDataType extends JsonUtils {
 
-  private val allOrNothing: PartialFunction[JValue, JSDataType] = {
-    case JBool(true)  => JSAnything
-    case JBool(false) => JSNothing
-  }
-
-  private val const: PartialFunction[JValue, JSDataType] = {
+  private val valueBased: PartialFunction[JValue, JSDataType] = {
+    case JBool(true)                                 => JSAnything
+    case JBool(false)                                => JSNothing
     case obj: JObject if (obj \ "const") != JNothing => extractJson[JSConst](obj)
+    case obj: JObject if (obj \ "enum") != JNothing  => extractJson[JSEnum](obj)
   }
 
   private val explicitTypeResolver = {
@@ -131,7 +129,7 @@ object JSDataType extends JsonUtils {
   }
 
   private val des: PartialFunction[JValue, JSDataType] =
-    allOrNothing orElse const orElse explicitTypeResolver orElse implicitTypeResolver orElse {
+    valueBased orElse explicitTypeResolver orElse implicitTypeResolver orElse {
       case _ => JSAnything
     }
 
@@ -156,9 +154,9 @@ case object JSNothing extends JSDataType {
 }
 
 /**
- * Primitive types: strings, numbers, booleans and null.
+ * Scalar types: strings, numbers, booleans and null, as well as enum and const.
  */
-sealed trait JSPrimitiveType extends JSDataType
+sealed trait JSScalarType extends JSDataType
 
 /**
  * JSON Schema String data type.
@@ -173,7 +171,7 @@ final case class JSString private(annotation: Option[Annotation] = None,
                                   minLength: Option[Int] = None,
                                   maxLength: Option[Int] = None,
                                   pattern: Option[Pattern] = None,
-                                  format: Option[JSStringFormat] = None) extends JSPrimitiveType {
+                                  format: Option[JSStringFormat] = None) extends JSScalarType {
   assert(minLength.forall(_ >= 0))
   assert(maxLength.forall(_ >= 0))
 }
@@ -212,7 +210,7 @@ final case class JSInteger private(annotation: Option[Annotation] = None,
                                    minimum: Option[BigDecimal] = None,
                                    exclusiveMinimum: Option[BigDecimal] = None,
                                    maximum: Option[BigDecimal] = None,
-                                   exclusiveMaximum: Option[BigDecimal] = None) extends JSPrimitiveType {
+                                   exclusiveMaximum: Option[BigDecimal] = None) extends JSScalarType {
   assert(multipleOf.forall(_ > 0))
 }
 
@@ -251,7 +249,7 @@ final case class JSNumber private(annotation: Option[Annotation] = None,
                                   minimum: Option[BigDecimal] = None,
                                   exclusiveMinimum: Option[BigDecimal] = None,
                                   maximum: Option[BigDecimal] = None,
-                                  exclusiveMaximum: Option[BigDecimal] = None) extends JSPrimitiveType {
+                                  exclusiveMaximum: Option[BigDecimal] = None) extends JSScalarType {
   assert(multipleOf.forall(_ > 0))
 }
 
@@ -280,7 +278,7 @@ object JSNumber extends JsonUtils {
  *
  * @param annotation type annotation.
  */
-final case class JSBoolean private(annotation: Option[Annotation] = None) extends JSPrimitiveType
+final case class JSBoolean private(annotation: Option[Annotation] = None) extends JSScalarType
 
 /**
  * Factory for [[JSBoolean]] instances.
@@ -301,7 +299,7 @@ object JSBoolean extends JsonUtils {
  *
  * @param annotation type annotation.
  */
-final case class JSNull private(annotation: Option[Annotation] = None) extends JSPrimitiveType
+final case class JSNull private(annotation: Option[Annotation] = None) extends JSScalarType
 
 /**
  * Factory for [[JSNull]] instances.
@@ -487,7 +485,7 @@ object JSObject extends JsonUtils {
  * @param annotation type annotation.
  * @param value      constant value.
  */
-final case class JSConst(annotation: Option[Annotation] = None, value: JValue) extends JSDataType
+final case class JSConst(annotation: Option[Annotation] = None, value: JValue) extends JSScalarType
 
 /**
  * Factory for [[JSConst]] instances.
@@ -502,6 +500,25 @@ object JSConst extends JsonUtils {
       JSConst(
         Annotation.noneIfEmpty(extractJson[Option[Annotation]](jv)),
         jv \ "const"
+      )
+  })
+}
+
+final case class JSEnum(annotation: Option[Annotation] = None, values: List[JValue]) extends JSScalarType
+
+/**
+ * Factory for [[JSEnum]] instances.
+ */
+object JSEnum extends JsonUtils {
+
+  /**
+   * JSON serializer for [[JSEnum]] instances.
+   */
+  val serializer = deserializer[JSEnum](_ => {
+    case jv: JObject =>
+      JSEnum(
+        Annotation.noneIfEmpty(extractJson[Option[Annotation]](jv)),
+        (jv \ "enum").extract[List[JValue]]
       )
   })
 }
