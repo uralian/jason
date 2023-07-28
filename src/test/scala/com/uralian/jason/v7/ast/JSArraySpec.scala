@@ -2,6 +2,7 @@ package com.uralian.jason.v7.ast
 
 import com.uralian.jason.AbstractUnitSpec
 import com.uralian.jason.util.JsonUtils
+import org.json4s.MappingException
 
 /**
  * JSArray test suite.
@@ -178,6 +179,14 @@ class JSArraySpec extends AbstractUnitSpec {
           schema.value mustBe ListType(JSString())
           unique.value mustBe true
       }
+    }
+    "fail for invalid JSON" in {
+      val json = """{"minItems": true}"""
+      a[MappingException] mustBe thrownBy(JsonUtils.readJson[JSArray](json))
+    }
+    "fail for bad parameters" in {
+      val json = """{"minItems": -1}"""
+      an[AssertionError] mustBe thrownBy(JsonUtils.readJson[JSArray](json))
     }
   }
 }

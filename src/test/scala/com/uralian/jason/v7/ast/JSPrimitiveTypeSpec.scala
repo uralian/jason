@@ -2,7 +2,8 @@ package com.uralian.jason.v7.ast
 
 import com.uralian.jason.AbstractUnitSpec
 import com.uralian.jason.util.JsonUtils
-import org.json4s.{JArray, JDecimal, JInt, MappingException}
+import org.json4s.JsonDSL._
+import org.json4s.{JArray, JDecimal, JInt, JObject, MappingException}
 
 /**
  * JSDataType test suite.
@@ -38,7 +39,6 @@ class JSPrimitiveTypeSpec extends AbstractUnitSpec {
     "deserialize from valid JSON without optional elements" in {
       val json = """{}"""
       val data = JsonUtils.readJson[JSString](json)
-      data.typeName mustBe JSTypeName.JSString
       data.annotation mustBe empty
       data.minLength mustBe empty
       data.maxLength mustBe empty
@@ -86,7 +86,6 @@ class JSPrimitiveTypeSpec extends AbstractUnitSpec {
     "deserialize from valid JSON without optional elements" in {
       val json = """{}"""
       val data = JsonUtils.readJson[JSInteger](json)
-      data.typeName mustBe JSTypeName.JSInteger
       data.annotation mustBe empty
       data.minimum mustBe empty
       data.maximum mustBe empty
@@ -135,7 +134,6 @@ class JSPrimitiveTypeSpec extends AbstractUnitSpec {
     "deserialize from valid JSON without optional elements" in {
       val json = """{}"""
       val data = JsonUtils.readJson[JSNumber](json)
-      data.typeName mustBe JSTypeName.JSNumber
       data.minimum mustBe empty
       data.maximum mustBe empty
       data.exclusiveMinimum mustBe empty
@@ -167,7 +165,6 @@ class JSPrimitiveTypeSpec extends AbstractUnitSpec {
     "deserialize from valid JSON without optional elements" in {
       val json = """{}"""
       val data = JsonUtils.readJson[JSBoolean](json)
-      data.typeName mustBe JSTypeName.JSBoolean
       data.annotation mustBe empty
     }
   }
@@ -187,8 +184,28 @@ class JSPrimitiveTypeSpec extends AbstractUnitSpec {
     "deserialize from valid JSON without optional elements" in {
       val json = """{}"""
       val data = JsonUtils.readJson[JSNull](json)
-      data.typeName mustBe JSTypeName.JSNull
       data.annotation mustBe empty
+    }
+  }
+
+  "JSConst" should {
+    "deserialize from valid JSON with optional elements" in {
+      val json =
+        """
+          |{
+          |  "title": "sample",
+          |  "const": {"a": 1, "b": true}
+          |}
+          |""".stripMargin
+      val data = JsonUtils.readJson[JSConst](json)
+      data.annotation.value mustBe Annotation(title = Some("sample"))
+      data.value mustBe JObject("a" -> 1, "b" -> true)
+    }
+    "deserialize from valid JSON without optional elements" in {
+      val json = """{"const": 123}"""
+      val data = JsonUtils.readJson[JSConst](json)
+      data.annotation mustBe empty
+      data.value mustBe JInt(123)
     }
   }
 }

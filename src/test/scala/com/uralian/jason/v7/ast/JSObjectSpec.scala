@@ -2,6 +2,7 @@ package com.uralian.jason.v7.ast
 
 import com.uralian.jason.AbstractUnitSpec
 import com.uralian.jason.util.JsonUtils
+import org.json4s.MappingException
 
 /**
  * JSObject test suite.
@@ -79,6 +80,14 @@ class JSObjectSpec extends AbstractUnitSpec {
           |""".stripMargin
       val data = JsonUtils.readJson[JSObject](json)
       data.additionalProperties mustBe empty
+    }
+    "fail for invalid JSON" in {
+      val json = """{"minProperties": true}"""
+      a[MappingException] mustBe thrownBy(JsonUtils.readJson[JSObject](json))
+    }
+    "fail for bad parameters" in {
+      val json = """{"minProperties": -1}"""
+      an[AssertionError] mustBe thrownBy(JsonUtils.readJson[JSObject](json))
     }
   }
 }

@@ -53,12 +53,6 @@ object Annotation extends JsonUtils {
  * JSON Schema data type.
  */
 sealed trait JSDataType {
-  /**
-   * JSON Schema type name.
-   *
-   * @return JS type name.
-   */
-  def typeName: JSTypeName
 
   /**
    * JSON Schema type annotation.
@@ -76,6 +70,10 @@ object JSDataType extends JsonUtils {
   private val allOrNothing: PartialFunction[JValue, JSDataType] = {
     case JBool(true)  => JSAnything
     case JBool(false) => JSNothing
+  }
+
+  private val const: PartialFunction[JValue, JSDataType] = {
+    case obj: JObject if (obj \ "const") != JNothing => extractJson[JSConst](obj)
   }
 
   private val explicitTypeResolver = {
@@ -133,7 +131,7 @@ object JSDataType extends JsonUtils {
   }
 
   private val des: PartialFunction[JValue, JSDataType] =
-    allOrNothing orElse explicitTypeResolver orElse implicitTypeResolver orElse {
+    allOrNothing orElse const orElse explicitTypeResolver orElse implicitTypeResolver orElse {
       case _ => JSAnything
     }
 
@@ -143,15 +141,17 @@ object JSDataType extends JsonUtils {
   val serializer = deserializer[JSDataType](_ => des)
 }
 
-@SuppressWarnings(Array("org.wartremover.warts.Null"))
+/**
+ * Type that accepts any data.
+ */
 case object JSAnything extends JSDataType {
-  val typeName: JSTypeName = null
   val annotation: Option[Annotation] = None
 }
 
-@SuppressWarnings(Array("org.wartremover.warts.Null"))
+/**
+ * Type that accepts no data.
+ */
 case object JSNothing extends JSDataType {
-  val typeName: JSTypeName = null
   val annotation: Option[Annotation] = None
 }
 
@@ -176,8 +176,6 @@ final case class JSString private(annotation: Option[Annotation] = None,
                                   format: Option[JSStringFormat] = None) extends JSPrimitiveType {
   assert(minLength.forall(_ >= 0))
   assert(maxLength.forall(_ >= 0))
-
-  val typeName: JSTypeName = JSTypeName.JSString
 }
 
 /**
@@ -216,8 +214,6 @@ final case class JSInteger private(annotation: Option[Annotation] = None,
                                    maximum: Option[BigDecimal] = None,
                                    exclusiveMaximum: Option[BigDecimal] = None) extends JSPrimitiveType {
   assert(multipleOf.forall(_ > 0))
-
-  val typeName: JSTypeName = JSTypeName.JSInteger
 }
 
 /**
@@ -257,10 +253,7 @@ final case class JSNumber private(annotation: Option[Annotation] = None,
                                   maximum: Option[BigDecimal] = None,
                                   exclusiveMaximum: Option[BigDecimal] = None) extends JSPrimitiveType {
   assert(multipleOf.forall(_ > 0))
-
-  val typeName: JSTypeName = JSTypeName.JSNumber
 }
-
 
 /**
  * Factory for [[JSNumber]] instances.
@@ -287,9 +280,7 @@ object JSNumber extends JsonUtils {
  *
  * @param annotation type annotation.
  */
-final case class JSBoolean private(annotation: Option[Annotation] = None) extends JSPrimitiveType {
-  val typeName: JSTypeName = JSTypeName.JSBoolean
-}
+final case class JSBoolean private(annotation: Option[Annotation] = None) extends JSPrimitiveType
 
 /**
  * Factory for [[JSBoolean]] instances.
@@ -310,9 +301,7 @@ object JSBoolean extends JsonUtils {
  *
  * @param annotation type annotation.
  */
-final case class JSNull private(annotation: Option[Annotation] = None) extends JSPrimitiveType {
-  val typeName: JSTypeName = JSTypeName.JSNull
-}
+final case class JSNull private(annotation: Option[Annotation] = None) extends JSPrimitiveType
 
 /**
  * Factory for [[JSNull]] instances.
@@ -404,8 +393,6 @@ final case class JSArray private(annotation: Option[Annotation] = None,
                                  unique: Option[Boolean] = None) extends JSDataType {
   assert(minItems.forall(_ >= 0))
   assert(maxItems.forall(_ >= 0))
-
-  val typeName: JSTypeName = JSTypeName.JSArray
 }
 
 /**
@@ -463,8 +450,6 @@ final case class JSObject(annotation: Option[Annotation] = None,
                           maxProperties: Option[Int] = None) extends JSDataType {
   assert(minProperties.forall(_ >= 0))
   assert(maxProperties.forall(_ >= 0))
-
-  val typeName: JSTypeName = JSTypeName.JSObject
 }
 
 /**
@@ -494,4 +479,29 @@ object JSObject extends JsonUtils {
       maxProperties = extractJson[Option[Int]](jv \ "maxProperties")
     )
   )
+}
+
+/** *
+ * JSON Schema Const data type.
+ *
+ * @param annotation type annotation.
+ * @param value      constant value.
+ */
+final case class JSConst(annotation: Option[Annotation] = None, value: JValue) extends JSDataType
+
+/**
+ * Factory for [[JSConst]] instances.
+ */
+object JSConst extends JsonUtils {
+
+  /**
+   * JSON serializer for [[JSConst]] instances.
+   */
+  val serializer = deserializer[JSConst](_ => {
+    case jv: JObject =>
+      JSConst(
+        Annotation.noneIfEmpty(extractJson[Option[Annotation]](jv)),
+        jv \ "const"
+      )
+  })
 }

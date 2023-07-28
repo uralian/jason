@@ -172,7 +172,6 @@ class JsonUtilsSpec extends AbstractUnitSpec with JsonUtils {
 /**
  * Contains test artifacts.
  */
-@SuppressWarnings(Array("org.wartremover.warts.Any"))
 object JsonUtilsSpec {
 
   sealed trait Employment extends EnumEntry with Lowercase

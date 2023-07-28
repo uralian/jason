@@ -3,7 +3,7 @@ package com.uralian.jason.v7.ast
 import com.uralian.jason.AbstractUnitSpec
 import com.uralian.jason.util.JsonUtils
 import org.json4s.JsonDSL._
-import org.json4s.{JArray, JInt, JValue}
+import org.json4s.{JArray, JInt, JObject, JValue}
 
 /**
  * JSDataType test suite.
@@ -64,6 +64,18 @@ class JSDataTypeSpec extends AbstractUnitSpec {
     "handle 'false' schema" in {
       val jv: JValue = false
       JsonUtils.extractJson[JSDataType](jv) mustBe JSNothing
+    }
+    "handle const schema" in {
+      val json =
+        """
+          |{
+          |  "title": "sample",
+          |  "const": {"a": 1, "b": true}
+          |}
+          |""".stripMargin
+      inside(JsonUtils.readJson[JSDataType](json)) {
+        case JSConst(Some(_), value) => value mustBe JObject("a" -> 1, "b" -> true)
+      }
     }
     "handle explicit 'string' schema" in {
       val json =

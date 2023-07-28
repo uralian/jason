@@ -14,7 +14,8 @@ package object ast {
     JSInteger.serializer,
     JSNumber.serializer,
     JSBoolean.serializer,
-    JSNull.serializer
+    JSNull.serializer,
+    JSConst.serializer
   )
 
   /**
