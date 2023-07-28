@@ -24,7 +24,8 @@ package object ast {
    */
   implicit val jsonFormats: Formats = JsonUtils.formats ++
     JsonUtils.commonSerializers +
-    JsonUtils.patternKeySerializer ++
+    JsonUtils.patternKeySerializer +
+    MediaContent.serializer ++
     scalarTypeSerializers +
     ListType.serializer +
     TupleType.serializer +
@@ -32,5 +33,6 @@ package object ast {
     JSObject.serializer +
     Annotation.serializer +
     JSDataType.serializer +
-    Json4s.serializer(JSStringFormat)
+    Json4s.serializer(JSStringFormat) +
+    Json4s.serializer(ContentEncoding)
 }

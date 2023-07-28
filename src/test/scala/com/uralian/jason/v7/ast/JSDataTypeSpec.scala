@@ -99,7 +99,7 @@ class JSDataTypeSpec extends AbstractUnitSpec {
           |}
           |""".stripMargin
       inside(JsonUtils.readJson[JSDataType](json)) {
-        case JSString(Some(_), _, _, _, Some(fmt)) => fmt mustBe JSStringFormat.Date
+        case JSString(Some(_), _, _, _, Some(fmt), _) => fmt mustBe JSStringFormat.Date
       }
     }
     "handle explicit 'integer' schema" in {
@@ -194,7 +194,7 @@ class JSDataTypeSpec extends AbstractUnitSpec {
           |}
           |""".stripMargin
       inside(JsonUtils.readJson[JSDataType](json)) {
-        case JSString(_, ml, _, _, _) => ml.value mustBe 7
+        case JSString(_, ml, _, _, _, _) => ml.value mustBe 7
       }
     }
     "handle implicit 'number' schema" in {

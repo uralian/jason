@@ -5,7 +5,7 @@ import enumeratum._
 /**
  * JSON String format.
  *
- * @param entryName
+ * @param entryName JSON Schema string format name.
  */
 sealed abstract class JSStringFormat(override val entryName: String) extends EnumEntry
 

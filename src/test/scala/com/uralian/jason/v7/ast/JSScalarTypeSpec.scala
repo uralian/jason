@@ -22,7 +22,9 @@ class JSScalarTypeSpec extends AbstractUnitSpec {
           |  "minLength": 2,
           |  "maxLength": 5,
           |  "pattern": "^(\\([0-9]{3}\\))?[0-9]{3}-[0-9]{4}$",
-          |  "format": "email"
+          |  "format": "email",
+          |  "contentMediaType": "image/png",
+          |  "contentEncoding": "base64",
           |}
           |""".stripMargin
       val data = JsonUtils.readJson[JSString](json)
@@ -35,6 +37,8 @@ class JSScalarTypeSpec extends AbstractUnitSpec {
       data.maxLength.value mustBe 5
       data.pattern.value.pattern() mustBe "^(\\([0-9]{3}\\))?[0-9]{3}-[0-9]{4}$"
       data.format.value mustBe JSStringFormat.Email
+      data.content.value.mediaType.value mustBe "image/png"
+      data.content.value.encoding.value mustBe ContentEncoding.Base64
     }
     "deserialize from valid JSON without optional elements" in {
       val json = """{}"""
@@ -44,6 +48,7 @@ class JSScalarTypeSpec extends AbstractUnitSpec {
       data.maxLength mustBe empty
       data.pattern mustBe empty
       data.format mustBe empty
+      data.content mustBe empty
     }
     "fail for invalid JSON" in {
       val json = """{"minLength": true}"""
