@@ -19,6 +19,15 @@ package object ast {
     JSEnum.serializer
   )
 
+  private val compositeTypeSerializers = List[Serializer[_]](
+    JSArray.serializer,
+    JSObject.serializer,
+    JSAllOf.serializer,
+    JSAnyOf.serializer,
+    JSOneOf.serializer,
+    JSNot.serializer
+  )
+
   /**
    * JSON formats.
    */
@@ -28,9 +37,8 @@ package object ast {
     MediaContent.serializer ++
     scalarTypeSerializers +
     ListType.serializer +
-    TupleType.serializer +
-    JSArray.serializer +
-    JSObject.serializer +
+    TupleType.serializer ++
+    compositeTypeSerializers +
     Annotation.serializer +
     JSDataType.serializer +
     Json4s.serializer(JSStringFormat) +

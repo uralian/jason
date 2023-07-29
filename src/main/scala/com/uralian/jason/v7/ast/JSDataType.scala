@@ -31,6 +31,13 @@ object JSDataType extends JsonUtils {
     case obj: JObject if (obj \ "enum") != JNothing  => extractJson[JSEnum](obj)
   }
 
+  private val compositeResolver: PartialFunction[JValue, JSDataType] = {
+    case obj: JObject if (obj \ "allOf") != JNothing => extractJson[JSAllOf](obj)
+    case obj: JObject if (obj \ "anyOf") != JNothing => extractJson[JSAnyOf](obj)
+    case obj: JObject if (obj \ "oneOf") != JNothing => extractJson[JSOneOf](obj)
+    case obj: JObject if (obj \ "not") != JNothing   => extractJson[JSNot](obj)
+  }
+
   private val explicitTypeResolver = {
     def getType(obj: JObject) = obj \ "type" match {
       case JString(s) => Some(s)
@@ -86,7 +93,7 @@ object JSDataType extends JsonUtils {
   }
 
   private val des: PartialFunction[JValue, JSDataType] =
-    valueBased orElse explicitTypeResolver orElse implicitTypeResolver orElse {
+    valueBased orElse compositeResolver orElse explicitTypeResolver orElse implicitTypeResolver orElse {
       case _ => JSAnything
     }
 
@@ -143,16 +150,15 @@ object JSString extends JsonUtils {
   /**
    * JSON serializer for [[JSString]] instances.
    */
-  val serializer = deserializer[JSString](_ => {
-    case jv: JObject =>
-      JSString(
-        annotation = Annotation.noneIfEmpty(extractJson[Option[Annotation]](jv)),
-        minLength = extractJson[Option[Int]](jv \ "minLength"),
-        maxLength = extractJson[Option[Int]](jv \ "maxLength"),
-        pattern = extractJson[Option[Pattern]](jv \ "pattern"),
-        format = extractJson[Option[JSStringFormat]](jv \ "format"),
-        content = MediaContent.noneIfEmpty(extractJson[Option[MediaContent]](jv)))
-  })
+  val serializer = objectDeserializer[JSString](jv =>
+    JSString(
+      annotation = Annotation.noneIfEmpty(extractJson[Option[Annotation]](jv)),
+      minLength = extractJson[Option[Int]](jv \ "minLength"),
+      maxLength = extractJson[Option[Int]](jv \ "maxLength"),
+      pattern = extractJson[Option[Pattern]](jv \ "pattern"),
+      format = extractJson[Option[JSStringFormat]](jv \ "format"),
+      content = MediaContent.noneIfEmpty(extractJson[Option[MediaContent]](jv)))
+  )
 }
 
 /**
@@ -182,16 +188,15 @@ object JSInteger extends JsonUtils {
   /**
    * JSON serializer for [[JSInteger]] instances.
    */
-  val serializer = deserializer[JSInteger](_ => {
-    case jv: JObject =>
-      JSInteger(
-        annotation = Annotation.noneIfEmpty(extractJson[Option[Annotation]](jv)),
-        multipleOf = extractJson[Option[BigDecimal]](jv \ "multipleOf"),
-        minimum = extractJson[Option[BigDecimal]](jv \ "minimum"),
-        exclusiveMinimum = extractJson[Option[BigDecimal]](jv \ "exclusiveMinimum"),
-        maximum = extractJson[Option[BigDecimal]](jv \ "maximum"),
-        exclusiveMaximum = extractJson[Option[BigDecimal]](jv \ "exclusiveMaximum"))
-  })
+  val serializer = objectDeserializer[JSInteger](jv =>
+    JSInteger(
+      annotation = Annotation.noneIfEmpty(extractJson[Option[Annotation]](jv)),
+      multipleOf = extractJson[Option[BigDecimal]](jv \ "multipleOf"),
+      minimum = extractJson[Option[BigDecimal]](jv \ "minimum"),
+      exclusiveMinimum = extractJson[Option[BigDecimal]](jv \ "exclusiveMinimum"),
+      maximum = extractJson[Option[BigDecimal]](jv \ "maximum"),
+      exclusiveMaximum = extractJson[Option[BigDecimal]](jv \ "exclusiveMaximum"))
+  )
 }
 
 /**
@@ -221,16 +226,15 @@ object JSNumber extends JsonUtils {
   /**
    * JSON serializer for [[JSNumber]] instances.
    */
-  val serializer = deserializer[JSNumber](_ => {
-    case jv: JObject =>
-      JSNumber(
-        annotation = Annotation.noneIfEmpty(extractJson[Option[Annotation]](jv)),
-        multipleOf = extractJson[Option[BigDecimal]](jv \ "multipleOf"),
-        minimum = extractJson[Option[BigDecimal]](jv \ "minimum"),
-        exclusiveMinimum = extractJson[Option[BigDecimal]](jv \ "exclusiveMinimum"),
-        maximum = extractJson[Option[BigDecimal]](jv \ "maximum"),
-        exclusiveMaximum = extractJson[Option[BigDecimal]](jv \ "exclusiveMaximum"))
-  })
+  val serializer = objectDeserializer[JSNumber](jv =>
+    JSNumber(
+      annotation = Annotation.noneIfEmpty(extractJson[Option[Annotation]](jv)),
+      multipleOf = extractJson[Option[BigDecimal]](jv \ "multipleOf"),
+      minimum = extractJson[Option[BigDecimal]](jv \ "minimum"),
+      exclusiveMinimum = extractJson[Option[BigDecimal]](jv \ "exclusiveMinimum"),
+      maximum = extractJson[Option[BigDecimal]](jv \ "maximum"),
+      exclusiveMaximum = extractJson[Option[BigDecimal]](jv \ "exclusiveMaximum"))
+  )
 }
 
 /**
@@ -248,10 +252,9 @@ object JSBoolean extends JsonUtils {
   /**
    * JSON serializer for [[JSBoolean]] instances.
    */
-  val serializer = deserializer[JSBoolean](_ => {
-    case jv: JObject =>
-      JSBoolean(Annotation.noneIfEmpty(extractJson[Option[Annotation]](jv)))
-  })
+  val serializer = objectDeserializer[JSBoolean](jv =>
+    JSBoolean(Annotation.noneIfEmpty(extractJson[Option[Annotation]](jv)))
+  )
 }
 
 /**
@@ -269,11 +272,58 @@ object JSNull extends JsonUtils {
   /**
    * JSON serializer for [[JSNull]] instances.
    */
-  val serializer = deserializer[JSNull](_ => {
-    case jv: JObject =>
-      JSNull(Annotation.noneIfEmpty(extractJson[Option[Annotation]](jv)))
-  })
+  val serializer = objectDeserializer[JSNull](jv =>
+    JSNull(Annotation.noneIfEmpty(extractJson[Option[Annotation]](jv)))
+  )
 }
+
+
+/** *
+ * JSON Schema Const data type.
+ *
+ * @param annotation type annotation.
+ * @param value      constant value.
+ */
+final case class JSConst(annotation: Option[Annotation] = None, value: JValue) extends JSScalarType
+
+/**
+ * Factory for [[JSConst]] instances.
+ */
+object JSConst extends JsonUtils {
+
+  /**
+   * JSON serializer for [[JSConst]] instances.
+   */
+  val serializer = objectDeserializer[JSConst](jv =>
+    JSConst(
+      Annotation.noneIfEmpty(extractJson[Option[Annotation]](jv)),
+      jv \ "const"
+    )
+  )
+}
+
+final case class JSEnum(annotation: Option[Annotation] = None, values: List[JValue]) extends JSScalarType
+
+/**
+ * Factory for [[JSEnum]] instances.
+ */
+object JSEnum extends JsonUtils {
+
+  /**
+   * JSON serializer for [[JSEnum]] instances.
+   */
+  val serializer = objectDeserializer[JSEnum](jv =>
+    JSEnum(
+      Annotation.noneIfEmpty(extractJson[Option[Annotation]](jv)),
+      (jv \ "enum").extract[List[JValue]]
+    )
+  )
+}
+
+/**
+ * Composite types: array, object, allOf, anyOf, oneOf and not.
+ */
+sealed trait JSCompositeType extends JSDataType
 
 /**
  * Array schema: can be either a typed list or a tuple.
@@ -320,16 +370,15 @@ object TupleType extends JsonUtils {
   /**
    * JSON serializer for [[TupleType]] instances.
    */
-  val serializer = deserializer[TupleType](_ => {
-    case jv: JObject =>
-      val itemTypes = extractJson[List[JSDataType]](jv \ "items")
-      val allowExtra = jv \ "additionalItems" match {
-        case JBool(true)  => Some(JSAnything)
-        case JBool(false) => Some(JSNothing)
-        case obj: JObject => Some(extractJson[JSDataType](obj))
-        case _            => None
-      }
-      TupleType(itemTypes = itemTypes, allowExtra = allowExtra)
+  val serializer = objectDeserializer[TupleType](jv => {
+    val itemTypes = extractJson[List[JSDataType]](jv \ "items")
+    val allowExtra = jv \ "additionalItems" match {
+      case JBool(true)  => Some(JSAnything)
+      case JBool(false) => Some(JSNothing)
+      case obj: JObject => Some(extractJson[JSDataType](obj))
+      case _            => None
+    }
+    TupleType(itemTypes = itemTypes, allowExtra = allowExtra)
   })
 }
 
@@ -348,7 +397,7 @@ final case class JSArray private(annotation: Option[Annotation] = None,
                                  contains: Option[JSDataType] = None,
                                  minItems: Option[Int] = None,
                                  maxItems: Option[Int] = None,
-                                 unique: Option[Boolean] = None) extends JSDataType {
+                                 unique: Option[Boolean] = None) extends JSCompositeType {
   assert(minItems.forall(_ >= 0))
   assert(maxItems.forall(_ >= 0))
 }
@@ -367,17 +416,16 @@ object JSArray extends JsonUtils {
   /**
    * JSON serializer for [[JSArray]] instances.
    */
-  val serializer = deserializer[JSArray](_ => {
-    case jv: JObject =>
-      JSArray(
-        annotation = Annotation.noneIfEmpty(extractJson[Option[Annotation]](jv)),
-        schema = extractSchema(jv),
-        contains = extractJson[Option[JSDataType]](jv \ "contains"),
-        minItems = extractJson[Option[Int]](jv \ "minItems"),
-        maxItems = extractJson[Option[Int]](jv \ "maxItems"),
-        unique = extractJson[Option[Boolean]](jv \ "unique")
-      )
-  })
+  val serializer = objectDeserializer[JSArray](jv =>
+    JSArray(
+      annotation = Annotation.noneIfEmpty(extractJson[Option[Annotation]](jv)),
+      schema = extractSchema(jv),
+      contains = extractJson[Option[JSDataType]](jv \ "contains"),
+      minItems = extractJson[Option[Int]](jv \ "minItems"),
+      maxItems = extractJson[Option[Int]](jv \ "maxItems"),
+      unique = extractJson[Option[Boolean]](jv \ "unique")
+    )
+  )
 }
 
 /**
@@ -405,7 +453,7 @@ final case class JSObject(annotation: Option[Annotation] = None,
                           requiredProperties: Option[List[String]] = None,
                           propertyNames: Option[JSString] = None,
                           minProperties: Option[Int] = None,
-                          maxProperties: Option[Int] = None) extends JSDataType {
+                          maxProperties: Option[Int] = None) extends JSCompositeType {
   assert(minProperties.forall(_ >= 0))
   assert(maxProperties.forall(_ >= 0))
 }
@@ -439,46 +487,98 @@ object JSObject extends JsonUtils {
   )
 }
 
-/** *
- * JSON Schema Const data type.
+/**
+ * JSON Schema AllOf type.
  *
  * @param annotation type annotation.
- * @param value      constant value.
+ * @param dataTypes  constituent types.
  */
-final case class JSConst(annotation: Option[Annotation] = None, value: JValue) extends JSScalarType
+final case class JSAllOf(annotation: Option[Annotation] = None,
+                         dataTypes: List[JSDataType]) extends JSCompositeType
 
 /**
- * Factory for [[JSConst]] instances.
+ * Factory for [[JSAllOf]] instances.
  */
-object JSConst extends JsonUtils {
-
+object JSAllOf extends JsonUtils {
   /**
-   * JSON serializer for [[JSConst]] instances.
+   * JSON serializer for [[JSAllOf]] instances.
    */
-  val serializer = deserializer[JSConst](_ => {
-    case jv: JObject =>
-      JSConst(
-        Annotation.noneIfEmpty(extractJson[Option[Annotation]](jv)),
-        jv \ "const"
-      )
-  })
+  val serializer = objectDeserializer[JSAllOf](jv =>
+    JSAllOf(
+      annotation = Annotation.noneIfEmpty(extractJson[Option[Annotation]](jv)),
+      dataTypes = extractJson[List[JSDataType]](jv \ "allOf")
+    )
+  )
 }
 
-final case class JSEnum(annotation: Option[Annotation] = None, values: List[JValue]) extends JSScalarType
+/**
+ * JSON Schema AnyOf type.
+ *
+ * @param annotation type annotation.
+ * @param dataTypes  constituent types.
+ */
+final case class JSAnyOf(annotation: Option[Annotation] = None,
+                         dataTypes: List[JSDataType]) extends JSCompositeType
 
 /**
- * Factory for [[JSEnum]] instances.
+ * Factory for [[JSAnyOf]] instances.
  */
-object JSEnum extends JsonUtils {
-
+object JSAnyOf extends JsonUtils {
   /**
-   * JSON serializer for [[JSEnum]] instances.
+   * JSON serializer for [[JSAnyOf]] instances.
    */
-  val serializer = deserializer[JSEnum](_ => {
-    case jv: JObject =>
-      JSEnum(
-        Annotation.noneIfEmpty(extractJson[Option[Annotation]](jv)),
-        (jv \ "enum").extract[List[JValue]]
-      )
-  })
+  val serializer = objectDeserializer[JSAnyOf](jv =>
+    JSAnyOf(
+      annotation = Annotation.noneIfEmpty(extractJson[Option[Annotation]](jv)),
+      dataTypes = extractJson[List[JSDataType]](jv \ "anyOf")
+    )
+  )
+}
+
+/**
+ * JSON Schema OneOf type.
+ *
+ * @param annotation type annotation.
+ * @param dataTypes  constituent types.
+ */
+final case class JSOneOf(annotation: Option[Annotation] = None,
+                         dataTypes: List[JSDataType]) extends JSCompositeType
+
+/**
+ * Factory for [[JSOneOf]] instances.
+ */
+object JSOneOf extends JsonUtils {
+  /**
+   * JSON serializer for [[JSOneOf]] instances.
+   */
+  val serializer = objectDeserializer[JSOneOf](jv =>
+    JSOneOf(
+      annotation = Annotation.noneIfEmpty(extractJson[Option[Annotation]](jv)),
+      dataTypes = extractJson[List[JSDataType]](jv \ "oneOf")
+    )
+  )
+}
+
+/**
+ * JSON Schema Not type.
+ *
+ * @param annotation type annotation.
+ * @param dataType   type to invert.
+ */
+final case class JSNot(annotation: Option[Annotation] = None,
+                       dataType: JSDataType) extends JSCompositeType
+
+/**
+ * Factory for [[JSNot]] instances.
+ */
+object JSNot extends JsonUtils {
+  /**
+   * JSON serializer for [[JSNot]] instances.
+   */
+  val serializer = objectDeserializer[JSNot](jv =>
+    JSNot(
+      annotation = Annotation.noneIfEmpty(extractJson[Option[Annotation]](jv)),
+      dataType = extractJson[JSDataType](jv \ "not")
+    )
+  )
 }

@@ -89,6 +89,63 @@ class JSDataTypeSpec extends AbstractUnitSpec {
         case JSEnum(Some(_), values) => values mustBe List[JValue](1, "abc", true, "x" -> "y")
       }
     }
+    "handle 'allOf' schema" in {
+      val json =
+        """
+          |{
+          |  "$comment": "sample comment",
+          |  "allOf": [
+          |    {"type": "string"},
+          |    {"minLength": 1}
+          |  ]
+          |}
+          |""".stripMargin
+      inside(JsonUtils.readJson[JSDataType](json)) {
+        case JSAllOf(Some(_), dts) => dts mustBe List[JSDataType](JSString(), JSString(minLength = Some(1)))
+      }
+    }
+    "handle 'anyOf' schema" in {
+      val json =
+        """
+          |{
+          |  "$comment": "sample comment",
+          |  "anyOf": [
+          |    {"type": "string"},
+          |    {"type": "number"}
+          |  ]
+          |}
+          |""".stripMargin
+      inside(JsonUtils.readJson[JSDataType](json)) {
+        case JSAnyOf(Some(_), dts) => dts mustBe List[JSDataType](JSString(), JSNumber())
+      }
+    }
+    "handle 'oneOf' schema" in {
+      val json =
+        """
+          |{
+          |  "$comment": "sample comment",
+          |  "oneOf": [
+          |    {"type": "string"},
+          |    {"type": "number"}
+          |  ]
+          |}
+          |""".stripMargin
+      inside(JsonUtils.readJson[JSDataType](json)) {
+        case JSOneOf(Some(_), dts) => dts mustBe List[JSDataType](JSString(), JSNumber())
+      }
+    }
+    "handle 'not' schema" in {
+      val json =
+        """
+          |{
+          |  "$comment": "sample comment",
+          |  "not": {"type": "object"}
+          |}
+          |""".stripMargin
+      inside(JsonUtils.readJson[JSDataType](json)) {
+        case JSNot(Some(_), dt) => dt mustBe JSObject()
+      }
+    }
     "handle explicit 'string' schema" in {
       val json =
         """
