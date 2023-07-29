@@ -14,7 +14,6 @@ project/plugins/project/
 .history
 boot/
 .env
-.jvmopts
 .bsp
 
 # Scala-IDE/Eclipse
