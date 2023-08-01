@@ -234,4 +234,30 @@ class JSScalarTypeSpec extends AbstractUnitSpec {
       data.values mustBe List[JValue](1, "abc", true, "x" -> "y")
     }
   }
+
+  "JSNot.serializer" should {
+    "deserialize from valid JSON with optional elements" in {
+      val json =
+        """
+          |{
+          |  "$comment": "sample comment",
+          |  "not": {"type": "number"}
+          |}
+          |""".stripMargin
+      val data = JsonUtils.readJson[JSNot](json)
+      data.annotation.value mustBe Annotation(comment = Some("sample comment"))
+      data.dataType mustBe JSNumber()
+    }
+    "deserialize from valid JSON without optional elements" in {
+      val json =
+        """
+          |{
+          |  "not": {"type": "array"}
+          |}
+          |""".stripMargin
+      val data = JsonUtils.readJson[JSNot](json)
+      data.annotation mustBe empty
+      data.dataType mustBe JSArray()
+    }
+  }
 }

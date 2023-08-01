@@ -2,9 +2,10 @@ package com.uralian.jason.v7.ast
 
 import com.uralian.jason.util.JsonUtils
 import org.json4s.FieldSerializer.renameFrom
-import org.json4s.{FieldSerializer, JArray, JBool, JNothing, JObject, JString, JValue}
+import org.json4s.{FieldSerializer, JArray, JBool, JNothing, JObject, JString, JValue, Serializer}
 
 import java.util.regex.Pattern
+import scala.reflect.ClassTag
 
 /**
  * JSON Schema data type.
@@ -29,13 +30,13 @@ object JSDataType extends JsonUtils {
     case JBool(false)                                => JSNothing
     case obj: JObject if (obj \ "const") != JNothing => extractJson[JSConst](obj)
     case obj: JObject if (obj \ "enum") != JNothing  => extractJson[JSEnum](obj)
+    case obj: JObject if (obj \ "not") != JNothing   => extractJson[JSNot](obj)
   }
 
   private val compositeResolver: PartialFunction[JValue, JSDataType] = {
     case obj: JObject if (obj \ "allOf") != JNothing => extractJson[JSAllOf](obj)
     case obj: JObject if (obj \ "anyOf") != JNothing => extractJson[JSAnyOf](obj)
     case obj: JObject if (obj \ "oneOf") != JNothing => extractJson[JSOneOf](obj)
-    case obj: JObject if (obj \ "not") != JNothing   => extractJson[JSNot](obj)
   }
 
   private val explicitTypeResolver = {
@@ -321,11 +322,6 @@ object JSEnum extends JsonUtils {
 }
 
 /**
- * Composite types: array, object, allOf, anyOf, oneOf and not.
- */
-sealed trait JSCompositeType extends JSDataType
-
-/**
  * Array schema: can be either a typed list or a tuple.
  */
 sealed trait ArraySchema
@@ -397,7 +393,7 @@ final case class JSArray private(annotation: Option[Annotation] = None,
                                  contains: Option[JSDataType] = None,
                                  minItems: Option[Int] = None,
                                  maxItems: Option[Int] = None,
-                                 unique: Option[Boolean] = None) extends JSCompositeType {
+                                 unique: Option[Boolean] = None) extends JSDataType {
   assert(minItems.forall(_ >= 0))
   assert(maxItems.forall(_ >= 0))
 }
@@ -453,7 +449,7 @@ final case class JSObject(annotation: Option[Annotation] = None,
                           requiredProperties: Option[List[String]] = None,
                           propertyNames: Option[JSString] = None,
                           minProperties: Option[Int] = None,
-                          maxProperties: Option[Int] = None) extends JSCompositeType {
+                          maxProperties: Option[Int] = None) extends JSDataType {
   assert(minProperties.forall(_ >= 0))
   assert(maxProperties.forall(_ >= 0))
 }
@@ -488,6 +484,69 @@ object JSObject extends JsonUtils {
 }
 
 /**
+ * JSON Schema Not type.
+ *
+ * @param annotation type annotation.
+ * @param dataType   type to invert.
+ */
+final case class JSNot(annotation: Option[Annotation] = None,
+                       dataType: JSDataType) extends JSScalarType
+
+/**
+ * Factory for [[JSNot]] instances.
+ */
+object JSNot extends JsonUtils {
+  /**
+   * JSON serializer for [[JSNot]] instances.
+   */
+  val serializer = objectDeserializer[JSNot](jv =>
+    JSNot(
+      annotation = Annotation.noneIfEmpty(extractJson[Option[Annotation]](jv)),
+      dataType = extractJson[JSDataType](jv \ "not")
+    )
+  )
+}
+
+/**
+ * Composite types: allOf, anyOf and oneOf.
+ */
+sealed trait JSCompositeType extends JSDataType {
+  def dataTypes: List[JSDataType]
+}
+
+object JSCompositeType extends JsonUtils {
+
+  /**
+   * Creates a serializer for a subtype of [[JSCompositeType]].
+   *
+   * @param key type key, like "allOf", "anyOf" or "oneOf".
+   * @param f   function that creates a new instance the target type.
+   * @tparam T the subtype of [[JSCompositeType]].
+   * @return a new instance of the target type.
+   */
+  def serializer[T <: JSCompositeType : ClassTag](key: String,
+                                                  f: (Option[Annotation], List[JSDataType]) => T): Serializer[T] = {
+
+    val doNotCopy = Set(key, "title", "description", "default", "$comment", "examples", "readOnly", "writeOnly")
+
+    def factorIn(jv: JObject) = {
+      val bare = jv.removeField(doNotCopy contains _._1)
+      jv.mapField {
+        case (`key`, JArray(list)) => key -> JArray(list.map(bare merge _))
+        case x                     => x
+      }
+    }
+
+    objectDeserializer[T](jv => {
+      val full = factorIn(jv)
+      val annotation = Annotation.noneIfEmpty(extractJson[Option[Annotation]](full))
+      val dataTypes = extractJson[List[JSDataType]](full \ key)
+      f(annotation, dataTypes)
+    })
+  }
+}
+
+/**
  * JSON Schema AllOf type.
  *
  * @param annotation type annotation.
@@ -503,12 +562,7 @@ object JSAllOf extends JsonUtils {
   /**
    * JSON serializer for [[JSAllOf]] instances.
    */
-  val serializer = objectDeserializer[JSAllOf](jv =>
-    JSAllOf(
-      annotation = Annotation.noneIfEmpty(extractJson[Option[Annotation]](jv)),
-      dataTypes = extractJson[List[JSDataType]](jv \ "allOf")
-    )
-  )
+  val serializer = JSCompositeType.serializer[JSAllOf]("allOf", JSAllOf.apply)
 }
 
 /**
@@ -527,12 +581,7 @@ object JSAnyOf extends JsonUtils {
   /**
    * JSON serializer for [[JSAnyOf]] instances.
    */
-  val serializer = objectDeserializer[JSAnyOf](jv =>
-    JSAnyOf(
-      annotation = Annotation.noneIfEmpty(extractJson[Option[Annotation]](jv)),
-      dataTypes = extractJson[List[JSDataType]](jv \ "anyOf")
-    )
-  )
+  val serializer = JSCompositeType.serializer[JSAnyOf]("anyOf", JSAnyOf.apply)
 }
 
 /**
@@ -551,34 +600,5 @@ object JSOneOf extends JsonUtils {
   /**
    * JSON serializer for [[JSOneOf]] instances.
    */
-  val serializer = objectDeserializer[JSOneOf](jv =>
-    JSOneOf(
-      annotation = Annotation.noneIfEmpty(extractJson[Option[Annotation]](jv)),
-      dataTypes = extractJson[List[JSDataType]](jv \ "oneOf")
-    )
-  )
-}
-
-/**
- * JSON Schema Not type.
- *
- * @param annotation type annotation.
- * @param dataType   type to invert.
- */
-final case class JSNot(annotation: Option[Annotation] = None,
-                       dataType: JSDataType) extends JSCompositeType
-
-/**
- * Factory for [[JSNot]] instances.
- */
-object JSNot extends JsonUtils {
-  /**
-   * JSON serializer for [[JSNot]] instances.
-   */
-  val serializer = objectDeserializer[JSNot](jv =>
-    JSNot(
-      annotation = Annotation.noneIfEmpty(extractJson[Option[Annotation]](jv)),
-      dataType = extractJson[JSDataType](jv \ "not")
-    )
-  )
+  val serializer = JSCompositeType.serializer[JSOneOf]("oneOf", JSOneOf.apply)
 }
