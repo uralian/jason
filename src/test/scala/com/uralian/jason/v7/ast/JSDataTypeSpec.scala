@@ -146,6 +146,18 @@ class JSDataTypeSpec extends AbstractUnitSpec {
         case JSNot(Some(_), dt) => dt mustBe JSObject()
       }
     }
+    "handle 'ref' schema" in {
+      val json =
+        """
+          |{
+          |  "$comment": "sample comment",
+          |  "$ref": "https://example.com/schemas/address"
+          |}
+          |""".stripMargin
+      inside(JsonUtils.readJson[JSDataType](json)) {
+        case JSRef(ref) => ref mustBe "https://example.com/schemas/address"
+      }
+    }
     "handle explicit 'string' schema" in {
       val json =
         """

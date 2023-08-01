@@ -31,6 +31,7 @@ object JSDataType extends JsonUtils {
     case obj: JObject if (obj \ "const") != JNothing => extractJson[JSConst](obj)
     case obj: JObject if (obj \ "enum") != JNothing  => extractJson[JSEnum](obj)
     case obj: JObject if (obj \ "not") != JNothing   => extractJson[JSNot](obj)
+    case obj: JObject if (obj \ "$ref") != JNothing  => extractJson[JSRef](obj)
   }
 
   private val compositeResolver: PartialFunction[JValue, JSDataType] = {
@@ -514,6 +515,9 @@ sealed trait JSCompositeType extends JSDataType {
   def dataTypes: List[JSDataType]
 }
 
+/**
+ * Factory for [[JSCompositeType]] subtypes.
+ */
 object JSCompositeType extends JsonUtils {
 
   /**
@@ -601,4 +605,25 @@ object JSOneOf extends JsonUtils {
    * JSON serializer for [[JSOneOf]] instances.
    */
   val serializer = JSCompositeType.serializer[JSOneOf]("oneOf", JSOneOf.apply)
+}
+
+/**
+ * JSON Schema reference type.
+ *
+ * @param ref reference path.
+ */
+final case class JSRef(ref: String) extends JSDataType {
+  val annotation: Option[Annotation] = None
+}
+
+/**
+ * Factory for [[JSRef]] instances.
+ */
+object JSRef extends JsonUtils {
+  /**
+   * JSON serializer for [[JSRef]] instances.
+   */
+  val serializer = objectDeserializer[JSRef](jv =>
+    JSRef(ref = extractJson[String](jv \ "$ref"))
+  )
 }

@@ -16,7 +16,9 @@ package object ast {
     JSBoolean.serializer,
     JSNull.serializer,
     JSConst.serializer,
-    JSEnum.serializer
+    JSEnum.serializer,
+    JSNot.serializer,
+    JSRef.serializer
   )
 
   private val compositeTypeSerializers = List[Serializer[_]](
@@ -25,7 +27,6 @@ package object ast {
     JSAllOf.serializer,
     JSAnyOf.serializer,
     JSOneOf.serializer,
-    JSNot.serializer
   )
 
   /**
