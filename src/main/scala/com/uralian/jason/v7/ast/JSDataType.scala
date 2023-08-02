@@ -31,6 +31,7 @@ object JSDataType extends JsonUtils {
     case obj: JObject if (obj \ "const") != JNothing => extractJson[JSConst](obj)
     case obj: JObject if (obj \ "enum") != JNothing  => extractJson[JSEnum](obj)
     case obj: JObject if (obj \ "not") != JNothing   => extractJson[JSNot](obj)
+    case obj: JObject if (obj \ "$ref") != JNothing  => extractJson[JSRef](obj)
   }
 
   private val compositeResolver: PartialFunction[JValue, JSDataType] = {
@@ -285,7 +286,7 @@ object JSNull extends JsonUtils {
  * @param annotation type annotation.
  * @param value      constant value.
  */
-final case class JSConst(annotation: Option[Annotation] = None, value: JValue) extends JSScalarType
+final case class JSConst private(annotation: Option[Annotation] = None, value: JValue) extends JSScalarType
 
 /**
  * Factory for [[JSConst]] instances.
@@ -303,7 +304,7 @@ object JSConst extends JsonUtils {
   )
 }
 
-final case class JSEnum(annotation: Option[Annotation] = None, values: List[JValue]) extends JSScalarType
+final case class JSEnum private(annotation: Option[Annotation] = None, values: List[JValue]) extends JSScalarType
 
 /**
  * Factory for [[JSEnum]] instances.
@@ -331,7 +332,7 @@ sealed trait ArraySchema
  *
  * @param itemType type of each list item.
  */
-final case class ListType(itemType: JSDataType) extends ArraySchema
+final case class ListType private(itemType: JSDataType) extends ArraySchema
 
 /**
  * Factory for [[ListType]] instances.
@@ -356,8 +357,8 @@ object ListType {
  *                   - [[JSNothing]] means no items are allowed (`false` in JSON schema)
  *                   - any other type defines which items are specifically allowed.
  */
-final case class TupleType(itemTypes: List[JSDataType],
-                           allowExtra: Option[JSDataType]) extends ArraySchema
+final case class TupleType private(itemTypes: List[JSDataType],
+                                   allowExtra: Option[JSDataType]) extends ArraySchema
 
 /**
  * Factory for [[TupleType]] instances.
@@ -442,14 +443,14 @@ object JSArray extends JsonUtils {
  * @param minProperties        the minimum number of properties.
  * @param maxProperties        the maximum number of properties.
  */
-final case class JSObject(annotation: Option[Annotation] = None,
-                          properties: Option[Map[String, JSDataType]] = None,
-                          patternProperties: Option[Map[Pattern, JSDataType]] = None,
-                          additionalProperties: Option[JSDataType] = None,
-                          requiredProperties: Option[List[String]] = None,
-                          propertyNames: Option[JSString] = None,
-                          minProperties: Option[Int] = None,
-                          maxProperties: Option[Int] = None) extends JSDataType {
+final case class JSObject private(annotation: Option[Annotation] = None,
+                                  properties: Map[String, JSDataType] = Map.empty,
+                                  patternProperties: Map[Pattern, JSDataType] = Map.empty,
+                                  additionalProperties: Option[JSDataType] = None,
+                                  requiredProperties: List[String] = Nil,
+                                  propertyNames: Option[JSString] = None,
+                                  minProperties: Option[Int] = None,
+                                  maxProperties: Option[Int] = None) extends JSDataType {
   assert(minProperties.forall(_ >= 0))
   assert(maxProperties.forall(_ >= 0))
 }
@@ -472,10 +473,10 @@ object JSObject extends JsonUtils {
   val serializer = objectDeserializer[JSObject](jv =>
     JSObject(
       annotation = Annotation.noneIfEmpty(extractJson[Option[Annotation]](jv)),
-      properties = extractJson[Option[Map[String, JSDataType]]](jv \ "properties"),
-      patternProperties = extractJson[Option[Map[Pattern, JSDataType]]](jv \ "patternProperties"),
+      properties = extractJson[Option[Map[String, JSDataType]]](jv \ "properties").getOrElse(Map.empty),
+      patternProperties = extractJson[Option[Map[Pattern, JSDataType]]](jv \ "patternProperties").getOrElse(Map.empty),
       additionalProperties = extractAdditionalProps(jv \ "additionalProperties"),
-      requiredProperties = extractJson[Option[List[String]]](jv \ "required"),
+      requiredProperties = extractJson[Option[List[String]]](jv \ "required").getOrElse(Nil),
       propertyNames = extractJson[Option[JSString]](jv \ "propertyNames"),
       minProperties = extractJson[Option[Int]](jv \ "minProperties"),
       maxProperties = extractJson[Option[Int]](jv \ "maxProperties")
@@ -489,8 +490,8 @@ object JSObject extends JsonUtils {
  * @param annotation type annotation.
  * @param dataType   type to invert.
  */
-final case class JSNot(annotation: Option[Annotation] = None,
-                       dataType: JSDataType) extends JSScalarType
+final case class JSNot private(annotation: Option[Annotation] = None,
+                               dataType: JSDataType) extends JSScalarType
 
 /**
  * Factory for [[JSNot]] instances.
@@ -514,6 +515,9 @@ sealed trait JSCompositeType extends JSDataType {
   def dataTypes: List[JSDataType]
 }
 
+/**
+ * Factory for [[JSCompositeType]] subtypes.
+ */
 object JSCompositeType extends JsonUtils {
 
   /**
@@ -552,8 +556,8 @@ object JSCompositeType extends JsonUtils {
  * @param annotation type annotation.
  * @param dataTypes  constituent types.
  */
-final case class JSAllOf(annotation: Option[Annotation] = None,
-                         dataTypes: List[JSDataType]) extends JSCompositeType
+final case class JSAllOf private(annotation: Option[Annotation] = None,
+                                 dataTypes: List[JSDataType]) extends JSCompositeType
 
 /**
  * Factory for [[JSAllOf]] instances.
@@ -571,8 +575,8 @@ object JSAllOf extends JsonUtils {
  * @param annotation type annotation.
  * @param dataTypes  constituent types.
  */
-final case class JSAnyOf(annotation: Option[Annotation] = None,
-                         dataTypes: List[JSDataType]) extends JSCompositeType
+final case class JSAnyOf private(annotation: Option[Annotation] = None,
+                                 dataTypes: List[JSDataType]) extends JSCompositeType
 
 /**
  * Factory for [[JSAnyOf]] instances.
@@ -590,8 +594,8 @@ object JSAnyOf extends JsonUtils {
  * @param annotation type annotation.
  * @param dataTypes  constituent types.
  */
-final case class JSOneOf(annotation: Option[Annotation] = None,
-                         dataTypes: List[JSDataType]) extends JSCompositeType
+final case class JSOneOf private(annotation: Option[Annotation] = None,
+                                 dataTypes: List[JSDataType]) extends JSCompositeType
 
 /**
  * Factory for [[JSOneOf]] instances.
@@ -601,4 +605,25 @@ object JSOneOf extends JsonUtils {
    * JSON serializer for [[JSOneOf]] instances.
    */
   val serializer = JSCompositeType.serializer[JSOneOf]("oneOf", JSOneOf.apply)
+}
+
+/**
+ * JSON Schema reference type.
+ *
+ * @param ref reference path.
+ */
+final case class JSRef(ref: String) extends JSDataType {
+  val annotation: Option[Annotation] = None
+}
+
+/**
+ * Factory for [[JSRef]] instances.
+ */
+object JSRef extends JsonUtils {
+  /**
+   * JSON serializer for [[JSRef]] instances.
+   */
+  val serializer = objectDeserializer[JSRef](jv =>
+    JSRef(ref = extractJson[String](jv \ "$ref"))
+  )
 }

@@ -36,15 +36,15 @@ class JSObjectSpec extends AbstractUnitSpec {
           |""".stripMargin
       val data = JsonUtils.readJson[JSObject](json)
       data.annotation.value mustBe Annotation(title = Some("person"))
-      data.properties.value mustBe Map[String, JSDataType](
+      data.properties mustBe Map[String, JSDataType](
         "name" -> JSString(maxLength = Some(100)),
         "age" -> JSInteger(minimum = Some(0))
       )
-      data.patternProperties.value.map {
+      data.patternProperties.map {
         case (k, v) => k.pattern() -> v
       } mustBe Map[String, JSDataType]("^S_" -> JSString(), "^B_" -> JSBoolean())
       data.additionalProperties.value mustBe JSArray()
-      data.requiredProperties.value mustBe List("name", "age")
+      data.requiredProperties mustBe List("name", "age")
       data.propertyNames.value mustBe JSString(minLength = Some(10), maxLength = Some(50))
       data.minProperties.value mustBe 2
       data.maxProperties.value mustBe 5

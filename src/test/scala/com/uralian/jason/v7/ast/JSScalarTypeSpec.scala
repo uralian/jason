@@ -260,4 +260,19 @@ class JSScalarTypeSpec extends AbstractUnitSpec {
       data.dataType mustBe JSArray()
     }
   }
+
+  "JSRef.serializer" should {
+    "deserialize from valid JSON" in {
+      val json =
+        """
+          |{
+          |  "$comment": "sample comment",
+          |  "$ref": "https://example.com/schemas/address"
+          |}
+          |""".stripMargin
+      val data = JsonUtils.readJson[JSRef](json)
+      data.annotation mustBe empty
+      data.ref mustBe "https://example.com/schemas/address"
+    }
+  }
 }

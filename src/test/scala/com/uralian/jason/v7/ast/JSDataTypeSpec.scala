@@ -146,6 +146,18 @@ class JSDataTypeSpec extends AbstractUnitSpec {
         case JSNot(Some(_), dt) => dt mustBe JSObject()
       }
     }
+    "handle 'ref' schema" in {
+      val json =
+        """
+          |{
+          |  "$comment": "sample comment",
+          |  "$ref": "https://example.com/schemas/address"
+          |}
+          |""".stripMargin
+      inside(JsonUtils.readJson[JSDataType](json)) {
+        case JSRef(ref) => ref mustBe "https://example.com/schemas/address"
+      }
+    }
     "handle explicit 'string' schema" in {
       val json =
         """
@@ -236,7 +248,7 @@ class JSDataTypeSpec extends AbstractUnitSpec {
           |""".stripMargin
       inside(JsonUtils.readJson[JSDataType](json)) {
         case JSObject(_, props, _, _, _, _, minProps, _) =>
-          props.value mustBe Map[String, JSDataType](
+          props mustBe Map[String, JSDataType](
             "name" -> JSString(maxLength = Some(100)),
             "age" -> JSInteger(minimum = Some(0))
           )
@@ -292,7 +304,7 @@ class JSDataTypeSpec extends AbstractUnitSpec {
           |""".stripMargin
       inside(JsonUtils.readJson[JSDataType](json)) {
         case JSObject(_, props, _, _, _, _, _, maxProps) =>
-          props.value mustBe Map[String, JSDataType](
+          props mustBe Map[String, JSDataType](
             "name" -> JSString(maxLength = Some(100)),
             "age" -> JSInteger(minimum = Some(0))
           )
