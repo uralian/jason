@@ -248,7 +248,7 @@ class JSDataTypeSpec extends AbstractUnitSpec {
           |""".stripMargin
       inside(JsonUtils.readJson[JSDataType](json)) {
         case JSObject(_, props, _, _, _, _, minProps, _) =>
-          props.value mustBe Map[String, JSDataType](
+          props mustBe Map[String, JSDataType](
             "name" -> JSString(maxLength = Some(100)),
             "age" -> JSInteger(minimum = Some(0))
           )
@@ -304,7 +304,7 @@ class JSDataTypeSpec extends AbstractUnitSpec {
           |""".stripMargin
       inside(JsonUtils.readJson[JSDataType](json)) {
         case JSObject(_, props, _, _, _, _, _, maxProps) =>
-          props.value mustBe Map[String, JSDataType](
+          props mustBe Map[String, JSDataType](
             "name" -> JSString(maxLength = Some(100)),
             "age" -> JSInteger(minimum = Some(0))
           )

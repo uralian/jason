@@ -42,6 +42,7 @@ package object ast {
     compositeTypeSerializers +
     Annotation.serializer +
     JSDataType.serializer +
+    JsonSchema.serializer +
     Json4s.serializer(JSStringFormat) +
     Json4s.serializer(ContentEncoding)
 }
