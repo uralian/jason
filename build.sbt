@@ -34,7 +34,8 @@ lazy val commonDependencies = Seq(
   "com.beachape" %% "enumeratum-json4s" % "1.7.3" excludeAll ("org.json4s"),
   "org.json4s" %% "json4s-native" % "4.0.6",
   "com.eed3si9n" %% "treehugger" % "0.4.4",
-  "org.scalactic" %% "scalactic" % "3.2.16"
+  "org.scalactic" %% "scalactic" % "3.2.16",
+  "com.google.guava" % "guava" % "32.1.2-jre"
 )
 
 lazy val testDependencies = Seq(

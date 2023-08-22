@@ -1,0 +1,17 @@
+/** Available MyEnum constants. */
+object MyEnum {
+  case object MyEnum_N123 extends MyEnum(BigInt("-123"))
+  case object MyEnum_456 extends MyEnum(BigInt("456"))
+  @SuppressWarnings(Array("org.wartremover.warts.Throw"))
+  def withValue(x: BigInt): MyEnum =
+    x match {
+      case MyEnum_N123.value => MyEnum_N123
+      case MyEnum_456.value => MyEnum_456
+      case _ => throw new IllegalArgumentException(x.toString)
+    }
+  val serializer = new CustomSerializer[MyEnum](_ => ({
+    case JInt(x) => withValue(x)
+  }, {
+    case (data: MyEnum) => JInt(data.value)
+  }))
+}

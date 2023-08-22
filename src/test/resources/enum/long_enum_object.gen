@@ -1,0 +1,17 @@
+/** Available MyEnum constants. */
+object MyEnum {
+  case object MyEnum_N123 extends MyEnum(Long(-123L))
+  case object MyEnum_456 extends MyEnum(Long(456L))
+  @SuppressWarnings(Array("org.wartremover.warts.Throw"))
+  def withValue(x: Long): MyEnum =
+    x match {
+      case MyEnum_N123.value => MyEnum_N123
+      case MyEnum_456.value => MyEnum_456
+      case _ => throw new IllegalArgumentException(x.toString)
+    }
+  val serializer = new CustomSerializer[MyEnum](_ => ({
+    case JLong(x) => withValue(x)
+  }, {
+    case (data: MyEnum) => JLong(data.value)
+  }))
+}
