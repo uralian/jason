@@ -1,0 +1,17 @@
+/** Available MyEnum constants. */
+object MyEnum {
+  case object Aaa extends MyEnum("AAA")
+  case object Bbb extends MyEnum("BBB")
+  @SuppressWarnings(Array("org.wartremover.warts.Throw"))
+  def withValue(x: String): MyEnum =
+    x match {
+      case Aaa.value => Aaa
+      case Bbb.value => Bbb
+      case _ => throw new IllegalArgumentException(x.toString)
+    }
+  val serializer = new CustomSerializer[MyEnum](_ => ({
+    case JString(x) => withValue(x)
+  }, {
+    case (data: MyEnum) => JString(data.value)
+  }))
+}

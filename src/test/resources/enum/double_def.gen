@@ -1,0 +1,31 @@
+package com.sample
+
+import org.json4s._
+
+import org.json4s.native.JsonMethods
+
+/**
+ * My enumeration
+ * @param value entry value.
+ */
+sealed abstract class MyEnum(val value: Double)
+
+/** Available MyEnum constants. */
+object MyEnum {
+  case object MyEnum_1_23 extends MyEnum(Double(1.23))
+  case object MyEnum_N4_5 extends MyEnum(Double(-4.5))
+  case object MyEnum_0_6 extends MyEnum(Double(0.6))
+  @SuppressWarnings(Array("org.wartremover.warts.Throw"))
+  def withValue(x: Double): MyEnum =
+    x match {
+      case MyEnum_1_23.value => MyEnum_1_23
+      case MyEnum_N4_5.value => MyEnum_N4_5
+      case MyEnum_0_6.value => MyEnum_0_6
+      case _ => throw new IllegalArgumentException(x.toString)
+    }
+  val serializer = new CustomSerializer[MyEnum](_ => ({
+    case JDouble(x) => withValue(x)
+  }, {
+    case (data: MyEnum) => JDouble(data.value)
+  }))
+}

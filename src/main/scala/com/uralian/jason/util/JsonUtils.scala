@@ -144,7 +144,7 @@ trait JsonUtils {
 }
 
 /**
- * Singleton object for JSON helpers.
+ * Singleton object for JSON utilities.
  */
 object JsonUtils extends JsonUtils {
 

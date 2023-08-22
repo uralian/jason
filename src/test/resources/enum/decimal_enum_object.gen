@@ -1,0 +1,17 @@
+/** Available MyEnum constants. */
+object MyEnum {
+  case object MyEnum_1_23 extends MyEnum(BigDecimal("1.23"))
+  case object MyEnum_N45_6 extends MyEnum(BigDecimal("-45.6"))
+  @SuppressWarnings(Array("org.wartremover.warts.Throw"))
+  def withValue(x: BigDecimal): MyEnum =
+    x match {
+      case MyEnum_1_23.value => MyEnum_1_23
+      case MyEnum_N45_6.value => MyEnum_N45_6
+      case _ => throw new IllegalArgumentException(x.toString)
+    }
+  val serializer = new CustomSerializer[MyEnum](_ => ({
+    case JDecimal(x) => withValue(x)
+  }, {
+    case (data: MyEnum) => JDecimal(data.value)
+  }))
+}

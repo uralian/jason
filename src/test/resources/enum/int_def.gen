@@ -1,0 +1,31 @@
+package com.sample
+
+import org.json4s._
+
+import org.json4s.native.JsonMethods
+
+/**
+ * My enumeration
+ * @param value entry value.
+ */
+sealed abstract class MyEnum(val value: BigInt)
+
+/** Available MyEnum constants. */
+object MyEnum {
+  case object MyEnum_123 extends MyEnum(BigInt("123"))
+  case object MyEnum_0 extends MyEnum(BigInt("0"))
+  case object MyEnum_N456 extends MyEnum(BigInt("-456"))
+  @SuppressWarnings(Array("org.wartremover.warts.Throw"))
+  def withValue(x: BigInt): MyEnum =
+    x match {
+      case MyEnum_123.value => MyEnum_123
+      case MyEnum_0.value => MyEnum_0
+      case MyEnum_N456.value => MyEnum_N456
+      case _ => throw new IllegalArgumentException(x.toString)
+    }
+  val serializer = new CustomSerializer[MyEnum](_ => ({
+    case JInt(x) => withValue(x)
+  }, {
+    case (data: MyEnum) => JInt(data.value)
+  }))
+}

@@ -1,0 +1,43 @@
+package com.sample
+
+import org.json4s._
+
+import org.json4s.native.JsonMethods
+
+/**
+ * My enumeration
+ * @param value entry value.
+ */
+sealed abstract class MyEnum(val value: JValue)
+
+/** Available MyEnum constants. */
+object MyEnum {
+  case object MyEnum_0 extends MyEnum(JString("Hello"))
+  case object MyEnum_1 extends MyEnum(JInt(BigInt("123")))
+  case object MyEnum_2 extends MyEnum(JLong(456L))
+  case object MyEnum_3 extends MyEnum(JDecimal(BigDecimal("4.567")))
+  case object MyEnum_4 extends MyEnum(JDouble(456.7))
+  case object MyEnum_5 extends MyEnum(JNull)
+  case object MyEnum_6 extends MyEnum(JBool(true))
+  case object MyEnum_7 extends MyEnum(JsonMethods.parse("[1,2,{\"a\":false}]"))
+  case object MyEnum_8 extends MyEnum(JsonMethods.parse("{\"x\":[true,2]}"))
+  @SuppressWarnings(Array("org.wartremover.warts.Throw"))
+  def withValue(x: JValue): MyEnum =
+    x match {
+      case MyEnum_0.value => MyEnum_0
+      case MyEnum_1.value => MyEnum_1
+      case MyEnum_2.value => MyEnum_2
+      case MyEnum_3.value => MyEnum_3
+      case MyEnum_4.value => MyEnum_4
+      case MyEnum_5.value => MyEnum_5
+      case MyEnum_6.value => MyEnum_6
+      case MyEnum_7.value => MyEnum_7
+      case MyEnum_8.value => MyEnum_8
+      case _ => throw new IllegalArgumentException(JsonMethods.pretty(JsonMethods.render(x)).toString)
+    }
+  val serializer = new CustomSerializer[MyEnum](_ => ({
+    case (jv: JValue) => withValue(jv)
+  }, {
+    case (data: MyEnum) => data.value
+  }))
+}

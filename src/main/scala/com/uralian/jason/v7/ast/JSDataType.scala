@@ -304,7 +304,17 @@ object JSConst extends JsonUtils {
   )
 }
 
-final case class JSEnum private(annotation: Option[Annotation] = None, values: List[JValue]) extends JSScalarType
+/**
+ * JSON Schema Enum data type.
+ *
+ * @param annotation type annotation.
+ * @param values     allowed values.
+ */
+final case class JSEnum private(annotation: Option[Annotation] = None,
+                                values: List[JValue]) extends JSScalarType {
+  assert(values.nonEmpty)
+  assert(values.toSet.size == values.size)
+}
 
 /**
  * Factory for [[JSEnum]] instances.
